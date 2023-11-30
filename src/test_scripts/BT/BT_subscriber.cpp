@@ -5,7 +5,7 @@ BluetoothSerial SerialBT;
     
 void setup()
 {
-  SerialBT.begin("ESP32test");
+  SerialBT.begin("mini_robot");
   delay(1000);
 }
     

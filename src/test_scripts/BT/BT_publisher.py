@@ -9,7 +9,7 @@
 import serial      #lib for serial communication
 import time
 
-arduinoData = serial.Serial('COM7', 9600)  #initializing port
+arduinoData = serial.Serial('COM7', 9600)  #initializing port | or COM4
 arduinoData.reset_input_buffer()
 
 while True:         #inf loop
