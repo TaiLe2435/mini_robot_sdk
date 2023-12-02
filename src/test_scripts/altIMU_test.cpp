@@ -219,6 +219,8 @@
 //   if (!gyroAcc.init() || !mag.init())
 //    {
 //      Serial.println("Failed to detect and initialize IMU");
+//      Serial.println(gyroAcc.init());
+//      Serial.println(mag.init());
 //      while(1); // preserves error message on serial monitor
 //    }
 //   gyroAcc.enableDefault();

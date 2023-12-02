@@ -9,10 +9,10 @@ LSM6 gyroAcc; // creating accelerometer/gyro object
 LIS3MDL mag;
 
 // Constant variables
-const float scaleA = 0.061;
-const float scaleG = 4.375;
-const float scaleM = 6842.0;
-const float delta = 0.2;
+const float scaleA {0.061};
+const float scaleG {4.375};
+const float scaleM {6842.0};
+const float delta {0.2};
 
 // Sensor variables
 float dt;
@@ -23,14 +23,14 @@ float mx, my, mz;
 float magGlobalX, magGlobalY, magGlobalZ;
 float magOffset[3], magGain[3];
 
-//_____________Calib Mag_________________//
-float magOffsetX = (float)-15845.0;
-float magOffsetY = (float)4232.0;
-float magOffsetZ = (float)-4223.0;
+// Magnetometer calibration constants
+const float magOffsetX {-15845.0};
+const float magOffsetY {4232.0};
+const float magOffsetZ {-4223.0};
 
-float magGainX = (float)(-6822.0 - -15845.0);
-float magGainY = (float)(5568.0 - 4232.0);
-float magGainZ = (float)(13157.0 - -4223.0);
+const float magGainX = -6822.0 - -15845.0;
+const float magGainY = 5568.0 - 4232.0;
+const float magGainZ = 13157.0 - -4223.0;
 
 
 // Angle Variables
@@ -44,88 +44,40 @@ float psiOffset;
 
 // Matrices and Position Variables
 float cPhi, sPhi, cTh, sTh, cPsi, sPsi;
-float R[3][3] = {
-  {0,0,0},
-  {0,0,0},
-  {0,0,0}
-};
-float T[3][3] = {
-  {0,0,0},
-  {0,0,0},
-  {0,0,0}
-};
-float W[3][3] = {
-  {0,0,0},
-  {0,0,0},
-  {0,0,0}
-};
-int A[3][1] = {
-  {0},
-  {0},
-  {0}
-};
-float aT[3][1] = {
-  {0},
-  {0},
-  {0}
-};
-float aG[3][1] = {
-  {0},
-  {0},
-  {0}
-};
-float aCentrp[3][1] = {
-  {0},
-  {0},
-  {0}
-};
-int a0[3][1] = {
-  {0},
-  {0},
-  {0}
-};
-int v0[3][1] = {
-  {0},
-  {0},
-  {0}
-};
-int x0[3][1] = {
-  {0},
-  {0},
-  {0}
-};
-int s[3][1] = {
-  {0},
-  {0},
-  {0}
-};
-int zero[3][1] = {
-  {0},
-  {0},
-  {0}
-};
+float R[3][3] {{ 0 }};
+float T[3][3] {{ 0 }};
+float W[3][3] {{ 0 }};
+int A[3][1] {{ 0 }};
+float aT[3][1] {{ 0 }};
+float aG[3][1] {{ 0 }};
+float aCentrp[3][1] {{ 0 }};
+int a0[3][1] {{ 0 }};
+int v0[3][1] {{ 0 }};
+int x0[3][1] {{ 0 }};
+int s[3][1] {{ 0 }};
+int zero[3][1] {{ 0 }};
 
 int pop[30];
-int avg = 0;
+int avg {0};
 
 // delta variables
-int counter = 0;
-unsigned long oldTime = 0;
+int counter {0};
+unsigned long oldTime {0};
 
 //________Gyro Offset Variables___________//
-float gyro_pitch_cal = 0;
-float gyro_roll_cal = 0;
-float gyro_yaw_cal = 0;
-float gyro_pitch = 0;
-float gyro_roll = 0;
-float gyro_yaw = 0;
-int calib_cnt = 100;
+float gyro_pitch_cal {0};
+float gyro_roll_cal {0};
+float gyro_yaw_cal {0};
+float gyro_pitch {0};
+float gyro_roll {0};
+float gyro_yaw {0};
+int calib_cnt {100};
 float calib[3];
 
 //LP filter variables
-const float alpha = 0.5; //bigger = not enough filtering, lower = too much filtering
-double filtered_data[6] = {0, 0, 0, 0, 0, 0};
-double data[3] = {0, 0, 0};
+const float alpha {0.5}; //bigger = not enough filtering, lower = too much filtering
+double filtered_data[6] {0};
+double data[3] {0};
 
 //__________________Functions_____________________________//
 void transform(float accX, float accY, float accZ, float matrix[3][3], String acc )
@@ -183,6 +135,7 @@ void euler(int sDdot[3][1], int sdot[3][1], int s0[3][1])
 
 void simpsons()
 {
+  // not full implemented yet
   return;
 }
 
@@ -226,7 +179,6 @@ unsigned long CalculateDeltaTime()
 
 float* initIMU() 
 {
-  Serial.begin(115200);
   Wire.begin();
   
   if (!gyroAcc.init() || !mag.init())
@@ -237,10 +189,6 @@ float* initIMU()
   gyroAcc.enableDefault();
   mag.enableDefault();
   mag.read();
-
-  // magGlobalX = mag.m.x / scaleM;
-  // magGlobalY = mag.m.y / scaleM;
-  // magGlobalZ = mag.m.z / scaleM;
 
   phi = 0;
   theta = 0;
@@ -267,14 +215,6 @@ float* initIMU()
   gyro_roll_cal  /= calib_cnt;
   gyro_yaw_cal   /= calib_cnt;
 
-  // Serial.print("Gyro calib: ");
-  // Serial.print(gyro_roll_cal);
-  // Serial.print(" ");
-  // Serial.print(gyro_pitch_cal);
-  // Serial.print(" ");
-  // Serial.println(gyro_yaw_cal);
-  // delay(200);
-
   calib[0] = gyro_roll_cal;
   calib[1] = gyro_pitch_cal;
   calib[2] = gyro_yaw_cal;
@@ -288,7 +228,6 @@ float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_c
   mag.read();
 
   dt = float(CalculateDeltaTime()) / 1000.0;
-  // Serial.println(dt, 3); // debugging delta
 
 //________Gyro data and conversion_______//
   wx = gyroAcc.g.x;
@@ -302,13 +241,6 @@ float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_c
   wy *= scaleG / 1000.0 * M_PI/180.0; // convert to deg/s then rads
   wx *= scaleG / 1000.0 * M_PI/180.0;
   wz *= scaleG / 1000.0 * M_PI/180.0; 
-
-  //  Serial.print("Gyro: ");
-  //  Serial.print(wx);
-  //  Serial.print(" ");
-  //  Serial.print(wy);
-  //  Serial.print(" ");
-  //  Serial.println(wz);
   
 //________________Acc data (cm/s^2)_______________________//
   ax = gyroAcc.a.x * scaleA / 100.0;
@@ -330,26 +262,12 @@ float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_c
   ax = filtered_data[3];
   ay = filtered_data[4];
   az = filtered_data[5];
-
-  //  Serial.print("Acc: ");
-  //  Serial.print(ax);
-  //  Serial.print(" ");
-  //  Serial.print(ay);
-  //  Serial.print(" ");
-  //  Serial.println(az);
   
 //________________Mag data (uT)__________________________//
 
   mx = ((mag.m.x  - magOffsetX) / magGainX) / scaleM * -1;
   my = ((mag.m.y  - magOffsetY) / magGainY) / scaleM * -1;
   mz = ((mag.m.z  - magOffsetZ) / magGainZ) / scaleM * -1;
-
-  //  Serial.print("Mag: ");
-  //  Serial.print(mx);
-  //  Serial.print(" ");
-  //  Serial.print(my);
-  //  Serial.print(" ");
-  //  Serial.println(mz);
 
   // Gyro angular velocity
   phiDot = (wx + (wz*cos(phi) + wy*sin(phi))*tan(theta));
@@ -360,28 +278,17 @@ float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_c
   phi_0 = phiDot*dt + phi_0;
   theta_0 = thetaDot*dt + theta_0;
   psi_0 = psiDot*delta + psi_0;
-
-  // Drift compensation
-  // a = atan2(mz, mx);
-  // b = atan2(magGlobalZ, magGlobalX);
-  // drift = (a-b) * 180.0 / M_PI;
   
   // Accel and Mag angles
   phi = (atan2(-ay, -az));                                              // converting to degs
   theta = (atan2(ax, sqrt(ay*ay + az*az)));
   psi = ((atan2(mx*cos(theta) + my*sin(theta)*sin(phi) + mz*sin(theta)*cos(phi), my*cos(phi) - mz*sin(phi))));
-  
-  // mx = mag.m.x * cos(theta) - mag.m.y * sin(phi) * sin(theta) + mag.m.z * cos(phi) * sin(theta); // second way of calculating psi
-  // my = mag.m.y * cos(phi) + mag.m.z * sin(phi);
-  // psi = atan2(my, mx);
-  // Serial.println(psi);
 
   // Complementary Filtering 
   roll = (0.02*phi_0 + 0.98*phi) * 180.0/M_PI;
   pitch = (0.02*theta_0 + 0.98*theta) * 180.0/M_PI;
   yaw = (0.98*psi_0 + 0.02*psi) * 180.0/M_PI;
 
-  
   if(counter < 1) // Setting ICs
   {
     roll0 = roll;
@@ -394,13 +301,6 @@ float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_c
     psi_0 = 0;
     
   }
-
-//  Serial.print("Acc: ");
-//  Serial.print(ax + ax0);
-//  Serial.print(" ");
-//  Serial.print(ay + ay0);
-//  Serial.print(" ");
-//  Serial.println(az + az0);
 
   roll = roll - roll0; //x
   pitch = pitch - pitch0; //y
@@ -523,7 +423,7 @@ float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_c
   // Serial.print(" ");
   // Serial.println(yaw);
 
-  delay(100);
+  // delay(100);
   return yaw;
 }
 
