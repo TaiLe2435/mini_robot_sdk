@@ -1,7 +1,6 @@
 # imports
 import cv2
 import numpy as np
-import math
 import time
 
 import serial # lib for serial communication
@@ -30,14 +29,14 @@ def euclid(center1, center2):
     return dist, dir
 
 # capturing video
-cap = cv2.VideoCapture(1) # change this value until you get the correct cam
+cap = cv2.VideoCapture(0) # change this value until you get the correct cam
 # cap.set(cv2.CAP_PROP_FPS, 10)
 flag = False
 prevCircle = None
 dist = lambda x1, y1, x2, y2: (x1-x2)**2+(y1-y2)**2 # mini function
 
-arduinoData = serial.Serial('COM7', 115200) # initializing port and speed
-arduinoData.reset_input_buffer()
+# arduinoData = serial.Serial('COM7', 115200) # initializing port and speed
+# arduinoData.reset_input_buffer()
 i = 0
 
 while True:
@@ -125,19 +124,19 @@ while True:
     # if i > 200:
     #     i = 0
     
-    l, theta = euclid(green_center, blue_center)
+    # l, theta = euclid(green_center, blue_center)
     
-    if l <= 75:
-        move_flag = 0
-        # print("stop")
-    elif l > 75:
-        move_flag = 1
-        # print("move")
-    print("l: ", l, " theta: ", -theta * 180 / np.pi) # 75 pixels away threshold
+    # if l <= 75:
+    #     move_flag = 0
+    #     # print("stop")
+    # elif l > 75:
+    #     move_flag = 1
+    #     # print("move")
+    # print("l: ", l, " theta: ", -theta * 180 / np.pi) # 75 pixels away threshold
     
-    theta = int(-theta * 180 / np.pi)
-    cmd = str(theta) + '\n'
-    arduinoData.write(cmd.encode())
+    # theta = int(-theta * 180 / np.pi)
+    # cmd = str(theta) + '\n'
+    # arduinoData.write(cmd.encode())
     
     # 'Esc' key to exit video streaming
     key = cv2.waitKey(1)
@@ -151,6 +150,6 @@ cv2.destroyAllWindows()
 
 end = "9999\n"
 time.sleep(1)
-arduinoData.write(end.encode())
-time.sleep(1)
-arduinoData.close()
+# arduinoData.write(end.encode())
+# time.sleep(1)
+# arduinoData.close()
