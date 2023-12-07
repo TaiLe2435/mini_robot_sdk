@@ -5,6 +5,12 @@ import time
 
 import serial # lib for serial communication
 
+ret = 0.3316338761548716
+cameraMatrix = np.array([[715.03132426, 0.0, 462.25626965],
+ [0.0, 715.67733789, 265.2425816],
+ [0.0,        0,              1]])
+distCoeff = np.array([[0.05515529], [-0.20330285], [-0.00108968], [-0.00468666], [0.25046973]])
+
 # function looking for clicks
 def clickEvent(event, x, y, flags, params):
     global flag, point
@@ -42,16 +48,23 @@ i = 0
 while True:
     _, img = cap.read()
     # resizing for faster processing
-    img = cv2.resize(img, (320,240), interpolation = cv2.INTER_LINEAR)
+    img = cv2.resize(img, (320,240), interpolation = cv2.INTER_AREA)
     # (1920.0 1080.0) or (1280.0 720.0)
     # creating window for mouse input
+    
+    # Calculate new camera matrix
+    newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix, distCoeff, (320,240), 1, (320,240))
+
+    # Undistort
+    dst = cv2.undistort(img, cameraMatrix, distCoeff, None, newCameraMatrix)
+    
     cv2.namedWindow("Robot Tracking")
     cv2.setMouseCallback('Robot Tracking', clickEvent)
     if flag == True:
-        cv2.circle(img, point, 10, (255, 0, 0), -1)
+        cv2.circle(dst, point, 10, (255, 0, 0), -1)
 
     # converting to HSV
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(dst, cv2.COLOR_BGR2HSV)
    
     # HSV range for color and defining mask
     # change these for respective colors
@@ -82,11 +95,11 @@ while True:
             # print(center)
            
             # plotting bounding box and center
-            img = cv2.rectangle(img, (x, y),
+            dst = cv2.rectangle(img, (x, y),
                                     (x + w, y + h),
                                     (0, 255, 0), 2)
-            cv2.circle(img, green_center, 10, (0, 255, 0), -1)
-            cv2.putText(img, "Robot", (x, y),
+            cv2.circle(dst, green_center, 10, (0, 255, 0), -1)
+            cv2.putText(dst, "Robot", (x, y),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0,
                         (0, 255, 0))
  
@@ -106,15 +119,15 @@ while True:
             # print(center)
            
             # plotting bounding box and center
-            img = cv2.rectangle(img, (x, y),
+            dst = cv2.rectangle(dst, (x, y),
                                     (x + w, y + h),
                                     (0, 255, 0), 2)
-            cv2.circle(img, blue_center, 10, (0, 255, 0), -1)
-            cv2.putText(img, "Target", (x, y),
+            cv2.circle(dst, blue_center, 10, (0, 255, 0), -1)
+            cv2.putText(dst, "Target", (x, y),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0,
                         (0, 255, 0))
    
-    cv2.imshow("Robot Tracking", img)
+    cv2.imshow("Robot Tracking", dst)
    
     
     # cmd = str(i) + '\n'
