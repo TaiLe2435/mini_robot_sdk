@@ -4,7 +4,7 @@ Import("env")
 env.Execute("$PYTHONEXE -m pip list")
 
 # Install custom packages from the PyPi registry
-env.Execute("$PYTHONEXE -m pip install opencv-python pyserial")
+env.Execute("$PYTHONEXE -m pip install opencv-contrib-python pyserial")
 
 # Install missed package
 try:
