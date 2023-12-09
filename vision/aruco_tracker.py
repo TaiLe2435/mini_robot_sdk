@@ -8,7 +8,7 @@ marker_image = cv2.aruco.generateImageMarker(dictionary, 1, 200, marker_image, 1
 cv2.imwrite("marker1.png", marker_image)
 
 # Open video capture
-inputVideo = cv2.VideoCapture(0)
+inputVideo = cv2.VideoCapture(1)
 
 # camera parameters
 cameraMatrix = np.array([[715.03132426, 0.0, 462.25626965],
@@ -17,7 +17,7 @@ cameraMatrix = np.array([[715.03132426, 0.0, 462.25626965],
 distCoeffs = np.array([[0.05515529], [-0.20330285], [-0.00108968], [-0.00468666], [0.25046973]])
 
 # Set coordinate system
-markerLength = 0.05
+markerLength = 29.40
 objPoints = np.array([[-markerLength/2, markerLength/2, 0],
                       [markerLength/2, markerLength/2, 0],
                       [markerLength/2, -markerLength/2, 0],
@@ -53,7 +53,7 @@ while inputVideo.isOpened():
 
         # Draw axis for each marker
         for i in range(nMarkers):
-            cv2.drawFrameAxes(imageCopy, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 0.1)
+            cv2.drawFrameAxes(imageCopy, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10)
 
     # Show resulting image and close window
     cv2.imshow("out", imageCopy)
