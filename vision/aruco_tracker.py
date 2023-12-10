@@ -1,6 +1,7 @@
 import cv2
 import cv2.aruco as aruco
 import numpy as np
+import time
 
 marker_image = None
 dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250) 
@@ -8,7 +9,7 @@ marker_image = cv2.aruco.generateImageMarker(dictionary, 1, 200, marker_image, 1
 cv2.imwrite("marker1.png", marker_image)
 
 # Open video capture
-inputVideo = cv2.VideoCapture(1)
+inputVideo = cv2.VideoCapture(0)
 
 # camera parameters
 cameraMatrix = np.array([[715.03132426, 0.0, 462.25626965],
@@ -26,6 +27,8 @@ objPoints = np.array([[-markerLength/2, markerLength/2, 0],
 # Create ArUco detector
 detectorParams = aruco.DetectorParameters()
 detector = aruco.ArucoDetector(dictionary, detectorParams)
+
+origin = np.array([-80,0,0,1])
 
 # Main loop
 while inputVideo.isOpened():
@@ -48,8 +51,23 @@ while inputVideo.isOpened():
         # Calculate pose for each marker
         for i in range(nMarkers):
             _, rvec, tvec = cv2.solvePnP(objPoints, corners[i], cameraMatrix, distCoeffs)
+            # print(tvec)
+            # time.sleep(0.5)
             rvecs.append(rvec)
             tvecs.append(tvec)
+            
+            R, _ = cv2.Rodrigues(rvec)
+            
+            T = np.eye(4,4)
+            T[3,3] = 1
+            T[:3, :3] = R
+            T[:3, 3] = tvec.reshape(3) 
+            # print(T)
+            time.sleep(1)
+            
+            origin_marker = np.dot(T, origin)
+            marker_position = origin_marker[:3]
+            print("Marker Position with respect to Origin:", marker_position)
 
         # Draw axis for each marker
         for i in range(nMarkers):
