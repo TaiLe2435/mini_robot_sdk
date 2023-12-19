@@ -42,7 +42,8 @@ class Estimation {
         void ddr_predict();
         void ddr_update();
 
-        void insert_matrix(float largeMatrix[12][12], float smallMatrix[3][3], int row, int col);
+        void insert_matrix(float largeMatrix[][12], float smallMatrix[][3], int numRowsLg, int numColsLg, int numRowsSm, int numColsSm, int row, int col);
+        void insert_matrix_default(float largeMatrix[][12], float smallMatrix[][3], int row, int col);
 };
 
 #endif

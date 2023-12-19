@@ -107,12 +107,16 @@ float* Estimation::get_acc(){
 // //     return 0.0;
 // }
 
-void Estimation::insert_matrix(float largeMatrix[12][12], float smallMatrix[3][3], int row, int col) {
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
+void Estimation::insert_matrix(float largeMatrix[][12], float smallMatrix[][3], int numRowsLg, int numColsLg, int numRowsSm, int numColsSm, int row, int col) {
+    for (int i = 0; i < numRowsSm; ++i) {
+        for (int j = 0; j < numColsSm; ++j) {
             largeMatrix[row + i][col + j] = smallMatrix[i][j];
         }
     }
+}
+
+void Estimation::insert_matrix_default(float largeMatrix[][12], float smallMatrix[][3], int row, int col) {
+    insert_matrix(largeMatrix, smallMatrix, 12, 12, 3, 3, row, col);
 }
 
 Estimation::Matrix12x12Pointer Estimation::imu_process(float* rpy, float* acc){
@@ -164,25 +168,25 @@ Estimation::Matrix12x12Pointer Estimation::imu_process(float* rpy, float* acc){
     //       zero33 zero33 -betaG*I33   zero33;
     //       zero33 zero33   zero33   -betaA*I33];
 
-    insert_matrix(Fk, zero33, 0, 0);
-    insert_matrix(Fk, zero33, 0, 3);
-    insert_matrix(Fk, neg_C, 0, 6);
-    insert_matrix(Fk, zero33, 0, 9);
+    insert_matrix_default(Fk, zero33, 0, 0);
+    insert_matrix_default(Fk, zero33, 0, 3);
+    insert_matrix_default(Fk, neg_C, 0, 6);
+    insert_matrix_default(Fk, zero33, 0, 9);
 
-    insert_matrix(Fk, S, 3, 0);
-    insert_matrix(Fk, zero33, 3, 3);
-    insert_matrix(Fk, zero33, 3, 6);
-    insert_matrix(Fk, C, 3, 9);
+    insert_matrix_default(Fk, S, 3, 0);
+    insert_matrix_default(Fk, zero33, 3, 3);
+    insert_matrix_default(Fk, zero33, 3, 6);
+    insert_matrix_default(Fk, C, 3, 9);
 
-    insert_matrix(Fk, zero33, 6, 0);
-    insert_matrix(Fk, zero33, 6, 3);
-    insert_matrix(Fk, betaGI33, 6, 6);
-    insert_matrix(Fk, zero33, 6, 9);
+    insert_matrix_default(Fk, zero33, 6, 0);
+    insert_matrix_default(Fk, zero33, 6, 3);
+    insert_matrix_default(Fk, betaGI33, 6, 6);
+    insert_matrix_default(Fk, zero33, 6, 9);
 
-    insert_matrix(Fk, zero33, 9, 0);
-    insert_matrix(Fk, zero33, 9, 3);
-    insert_matrix(Fk, zero33, 9, 6);
-    insert_matrix(Fk, betaAI33, 9, 9);
+    insert_matrix_default(Fk, zero33, 9, 0);
+    insert_matrix_default(Fk, zero33, 9, 3);
+    insert_matrix_default(Fk, zero33, 9, 6);
+    insert_matrix_default(Fk, betaAI33, 9, 9);
 
     return Fk;
 }
@@ -222,25 +226,25 @@ float I33[3][3] {
     //             zero33 zero33 I33 zero33;
     //             zero33 zero33 zero33 I33];
 
-    insert_matrix(Gk, neg_C, 0, 0);
-    insert_matrix(Gk, zero33, 0, 3);
-    insert_matrix(Gk, zero33, 0, 6);
-    insert_matrix(Gk, zero33, 0, 9);
+    insert_matrix_default(Gk, neg_C, 0, 0);
+    insert_matrix_default(Gk, zero33, 0, 3);
+    insert_matrix_default(Gk, zero33, 0, 6);
+    insert_matrix_default(Gk, zero33, 0, 9);
 
-    insert_matrix(Gk, zero33, 3, 0);
-    insert_matrix(Gk,C, 3, 3);
-    insert_matrix(Gk, zero33, 3, 6);
-    insert_matrix(Gk, zero33, 3, 9);
+    insert_matrix_default(Gk, zero33, 3, 0);
+    insert_matrix_default(Gk,C, 3, 3);
+    insert_matrix_default(Gk, zero33, 3, 6);
+    insert_matrix_default(Gk, zero33, 3, 9);
 
-    insert_matrix(Gk, zero33, 6, 0);
-    insert_matrix(Gk, zero33, 6, 3);
-    insert_matrix(Gk, I33, 6, 6);
-    insert_matrix(Gk, zero33, 6, 9);
+    insert_matrix_default(Gk, zero33, 6, 0);
+    insert_matrix_default(Gk, zero33, 6, 3);
+    insert_matrix_default(Gk, I33, 6, 6);
+    insert_matrix_default(Gk, zero33, 6, 9);
 
-    insert_matrix(Gk, zero33, 9, 0);
-    insert_matrix(Gk, zero33, 9, 3);
-    insert_matrix(Gk, zero33, 9, 6);
-    insert_matrix(Gk, I33, 9, 9);
+    insert_matrix_default(Gk, zero33, 9, 0);
+    insert_matrix_default(Gk, zero33, 9, 3);
+    insert_matrix_default(Gk, zero33, 9, 6);
+    insert_matrix_default(Gk, I33, 9, 9);
 
     return Gk;
 }
