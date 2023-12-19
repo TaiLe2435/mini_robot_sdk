@@ -104,7 +104,7 @@ float* Estimation::get_acc(){
 }
 
 // float* Estimation::get_rpy(){
-//     return 0.0;
+// //     return 0.0;
 // }
 
 void Estimation::insert_matrix(float largeMatrix[12][12], float smallMatrix[3][3], int row, int col) {
@@ -185,6 +185,64 @@ Estimation::Matrix12x12Pointer Estimation::imu_process(float* rpy, float* acc){
     insert_matrix(Fk, betaAI33, 9, 9);
 
     return Fk;
+}
+
+Estimation::Matrix12x12Pointer Estimation::imu_process_noise(float* rpy){
+
+float I33[3][3] {
+        {1, 0, 0},
+        {0, 1, 0},
+        {0, 0, 1} 
+    };
+
+    float zero33[3][3] {0};
+
+    float cR = cos(rpy[0]);
+    float sR = sin(rpy[0]);
+    float cP = cos(rpy[1]);
+    float sP = sin(rpy[1]);
+    float cY = cos(rpy[2]);
+    float sY = sin(rpy[2]);
+
+    float C[3][3] {
+        { cP*cY, sP*sR*cY-cR*sY, cR*sP*cY+sR*sY },
+        { cP*sY, sR*sP*sY+cR*cY, cR*sP*sY-cY*sR },
+        { -sP, sR*cP, cR*cP }
+    };
+
+    float neg_C[3][3] {
+        { -cP*cY, -sP*sR*cY+cR*sY, -cR*sP*cY-sR*sY },
+        { -cP*sY, -sR*sP*sY-cR*cY, -cR*sP*sY+cY*sR },
+        { sP, -sR*cP, -cR*cP }
+    };
+
+    
+    // Gk(:,:,i) = [-C zero33 zero33 zero33;
+    //             zero33 C zero33 zero33;
+    //             zero33 zero33 I33 zero33;
+    //             zero33 zero33 zero33 I33];
+
+    insert_matrix(Gk, neg_C, 0, 0);
+    insert_matrix(Gk, zero33, 0, 3);
+    insert_matrix(Gk, zero33, 0, 6);
+    insert_matrix(Gk, zero33, 0, 9);
+
+    insert_matrix(Gk, zero33, 3, 0);
+    insert_matrix(Gk,C, 3, 3);
+    insert_matrix(Gk, zero33, 3, 6);
+    insert_matrix(Gk, zero33, 3, 9);
+
+    insert_matrix(Gk, zero33, 6, 0);
+    insert_matrix(Gk, zero33, 6, 3);
+    insert_matrix(Gk, I33, 6, 6);
+    insert_matrix(Gk, zero33, 6, 9);
+
+    insert_matrix(Gk, zero33, 9, 0);
+    insert_matrix(Gk, zero33, 9, 3);
+    insert_matrix(Gk, zero33, 9, 6);
+    insert_matrix(Gk, I33, 9, 9);
+
+    return Gk;
 }
 
 void Estimation::imu_measurement(){

@@ -13,8 +13,11 @@ class Estimation {
         // float* get_rpy();
         void imu_ekf();
         void ddr_ekf();
+
+        // tests - these should be deleted/commented out
         typedef float (*Matrix12x12Pointer)[12];
-        Matrix12x12Pointer imu_process(float* rpy, float* acc);
+        // Matrix12x12Pointer imu_process(float* rpy, float* acc);
+        Matrix12x12Pointer imu_process_noise(float* rpy);
     private:
         float phi, theta, psi;
         float phi_0, theta_0, psi_0, psi_IC;
@@ -25,9 +28,11 @@ class Estimation {
         float acc[3];
 
         float Fk[12][12];
+        float Gk[12][12];
         // typedef float (*Matrix12x12Pointer)[12];
 
-        // Matrix12x12Pointer imu_process(float* rpy, float* acc);
+        Matrix12x12Pointer imu_process(float* rpy, float* acc);
+        // Matrix12x12Pointer imu_process_noise(float* rpy);
         void imu_measurement();
         void imu_predict();
         void imu_update();
