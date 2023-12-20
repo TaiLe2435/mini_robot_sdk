@@ -15,10 +15,12 @@ class Estimation {
         void ddr_ekf();
 
         // tests - these should be deleted/commented out
-        typedef float (*Matrix12x12Pointer)[12];
-        // Matrix12x12Pointer imu_process(float* rpy, float* acc);
-        Matrix12x12Pointer imu_process_noise(float* rpy);
-        Matrix12x12Pointer imu_measurement_model(float*);
+        typedef float (*MatrixNx12Pointer)[12];
+        typedef float (*MatrixNx3Pointer)[3];
+        MatrixNx12Pointer imu_process_model(float* rpy, float* acc);
+        MatrixNx12Pointer imu_process_noise(float*);
+        MatrixNx12Pointer imu_measurement_model(float*);
+        MatrixNx3Pointer ddr_process(float v, float heading);
     private:
         float phi, theta, psi;
         float phi_0, theta_0, psi_0, psi_IC;
@@ -29,26 +31,33 @@ class Estimation {
         float gyro[3];
         float acc[3];
 
-        float Fk[12][12];
-        float Gk[12][12];
-        float zk_imu[4]; // 
-        float Hk[4][12];
-        // typedef float (*Matrix12x12Pointer)[12];
+        float Fk_imu[12][12];
+        float Gk_imu[12][12];
+        float xk_imu[12];
+        float zk_imu[4]; 
+        float Hk_imu[4][12];
+        // typedef float (*MatrixNx12Pointer)[12];
 
-        Matrix12x12Pointer imu_process(float*, float*);
-        // Matrix12x12Pointer imu_process_noise(float*);
+        // MatrixNx12Pointer imu_process_model(float*, float*);
+        // MatrixNx12Pointer imu_process_noise(float*);
         float* imu_measurement(float, float*, float*);
-        // Matrix12x12Pointer imu_measurement_model(float*);
+        // MatrixNx12Pointer imu_measurement_model(float*);
         void imu_predict();
         void imu_update();
         
-        void ddr_process();
+        float Fk_ddr[3][3];
+        float xk_ddr[3];
+        float zk_ddr[3]; 
+        float Hk_ddr[3][3];
+
+        // MatrixNx3Pointer ddr_process(float v, float heading);
         void ddr_measurement();
         void ddr_predict();
         void ddr_update();
 
-        void insert_matrix(float largeMatrix[][12], float smallMatrix[][3], int numRowsLg, int numColsLg, int numRowsSm, int numColsSm, int row, int col);
-        void insert_matrix_default(float largeMatrix[][12], float smallMatrix[][3], int row, int col);
+        void insert_matrix_Nx12(float largeMatrix[][12], float smallMatrix[][3], int numRowsLg, int numColsLg, int numRowsSm, int numColsSm, int row, int col);
+        void insert_matrix_Nx12_default(float largeMatrix[][12], float smallMatrix[][3], int row, int col);
+        void insert_matrix_Nx3(float largeMatrix[][3], float smallMatrix[][3], int row, int col);
 };
 
 #endif

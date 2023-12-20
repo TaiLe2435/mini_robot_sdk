@@ -118,7 +118,7 @@ float* Estimation::get_acc(){
 // //     return 0.0;
 // }
 
-void Estimation::insert_matrix(float largeMatrix[][12], float smallMatrix[][3], int numRowsLg, int numColsLg, int numRowsSm, int numColsSm, int row, int col) {
+void Estimation::insert_matrix_Nx12(float largeMatrix[][12], float smallMatrix[][3], int numRowsLg, int numColsLg, int numRowsSm, int numColsSm, int row, int col) {
     for (int i = 0; i < numRowsSm; ++i) {
         for (int j = 0; j < numColsSm; ++j) {
             largeMatrix[row + i][col + j] = smallMatrix[i][j];
@@ -126,11 +126,11 @@ void Estimation::insert_matrix(float largeMatrix[][12], float smallMatrix[][3], 
     }
 }
 
-void Estimation::insert_matrix_default(float largeMatrix[][12], float smallMatrix[][3], int row, int col) {
-    insert_matrix(largeMatrix, smallMatrix, 12, 12, 3, 3, row, col);
+void Estimation::insert_matrix_Nx12_default(float largeMatrix[][12], float smallMatrix[][3], int row, int col) {
+    insert_matrix_Nx12(largeMatrix, smallMatrix, 12, 12, 3, 3, row, col);
 }
 
-Estimation::Matrix12x12Pointer Estimation::imu_process(float* rpy, float* acc){
+Estimation::MatrixNx12Pointer Estimation::imu_process_model(float* rpy, float* acc){
     const float betaG {0.2};
     const float betaA {0.2};
 
@@ -179,30 +179,30 @@ Estimation::Matrix12x12Pointer Estimation::imu_process(float* rpy, float* acc){
     //       zero33 zero33 -betaG*I33   zero33;
     //       zero33 zero33   zero33   -betaA*I33];
 
-    insert_matrix_default(Fk, zero33, 0, 0);
-    insert_matrix_default(Fk, zero33, 0, 3);
-    insert_matrix_default(Fk, neg_C, 0, 6);
-    insert_matrix_default(Fk, zero33, 0, 9);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 0, 0);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 0, 3);
+    insert_matrix_Nx12_default(Fk_imu, neg_C, 0, 6);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 0, 9);
 
-    insert_matrix_default(Fk, S, 3, 0);
-    insert_matrix_default(Fk, zero33, 3, 3);
-    insert_matrix_default(Fk, zero33, 3, 6);
-    insert_matrix_default(Fk, C, 3, 9);
+    insert_matrix_Nx12_default(Fk_imu, S, 3, 0);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 3, 3);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 3, 6);
+    insert_matrix_Nx12_default(Fk_imu, C, 3, 9);
 
-    insert_matrix_default(Fk, zero33, 6, 0);
-    insert_matrix_default(Fk, zero33, 6, 3);
-    insert_matrix_default(Fk, betaGI33, 6, 6);
-    insert_matrix_default(Fk, zero33, 6, 9);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 6, 0);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 6, 3);
+    insert_matrix_Nx12_default(Fk_imu, betaGI33, 6, 6);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 6, 9);
 
-    insert_matrix_default(Fk, zero33, 9, 0);
-    insert_matrix_default(Fk, zero33, 9, 3);
-    insert_matrix_default(Fk, zero33, 9, 6);
-    insert_matrix_default(Fk, betaAI33, 9, 9);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 9, 0);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 9, 3);
+    insert_matrix_Nx12_default(Fk_imu, zero33, 9, 6);
+    insert_matrix_Nx12_default(Fk_imu, betaAI33, 9, 9);
 
-    return Fk;
+    return Fk_imu;
 }
 
-Estimation::Matrix12x12Pointer Estimation::imu_process_noise(float* rpy){
+Estimation::MatrixNx12Pointer Estimation::imu_process_noise(float* rpy){
 
 float I33[3][3] {
         {1, 0, 0},
@@ -237,27 +237,27 @@ float I33[3][3] {
     //             zero33 zero33 I33 zero33;
     //             zero33 zero33 zero33 I33];
 
-    insert_matrix_default(Gk, neg_C, 0, 0);
-    insert_matrix_default(Gk, zero33, 0, 3);
-    insert_matrix_default(Gk, zero33, 0, 6);
-    insert_matrix_default(Gk, zero33, 0, 9);
+    insert_matrix_Nx12_default(Gk_imu, neg_C, 0, 0);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 0, 3);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 0, 6);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 0, 9);
 
-    insert_matrix_default(Gk, zero33, 3, 0);
-    insert_matrix_default(Gk, C, 3, 3);
-    insert_matrix_default(Gk, zero33, 3, 6);
-    insert_matrix_default(Gk, zero33, 3, 9);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 3, 0);
+    insert_matrix_Nx12_default(Gk_imu, C, 3, 3);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 3, 6);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 3, 9);
 
-    insert_matrix_default(Gk, zero33, 6, 0);
-    insert_matrix_default(Gk, zero33, 6, 3);
-    insert_matrix_default(Gk, I33, 6, 6);
-    insert_matrix_default(Gk, zero33, 6, 9);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 6, 0);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 6, 3);
+    insert_matrix_Nx12_default(Gk_imu, I33, 6, 6);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 6, 9);
 
-    insert_matrix_default(Gk, zero33, 9, 0);
-    insert_matrix_default(Gk, zero33, 9, 3);
-    insert_matrix_default(Gk, zero33, 9, 6);
-    insert_matrix_default(Gk, I33, 9, 9);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 9, 0);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 9, 3);
+    insert_matrix_Nx12_default(Gk_imu, zero33, 9, 6);
+    insert_matrix_Nx12_default(Gk_imu, I33, 9, 9);
 
-    return Gk;
+    return Gk_imu;
 }
 
 // not done
@@ -289,7 +289,7 @@ float* Estimation::imu_measurement(float ddr_heading, float* pos_prev, float* a_
     return zk_imu;
 }
 
-Estimation::Matrix12x12Pointer Estimation::imu_measurement_model(float* rpy){
+Estimation::MatrixNx12Pointer Estimation::imu_measurement_model(float* rpy){
    float I13[1][3] {
         {1, 0, 0}
     };
@@ -312,17 +312,17 @@ Estimation::Matrix12x12Pointer Estimation::imu_measurement_model(float* rpy){
     // Hjacobian(:,:,i) = [tR*cY tR*sY -1 zero13 zero13 zero13;
     //             zero33  I33   zero33 zero33];
 
-    insert_matrix(Hk, temp, 4, 12, 1, 3, 0, 0);
-    insert_matrix(Hk, zero13, 4, 12, 1, 3, 0, 3);
-    insert_matrix(Hk, zero13, 4, 12, 1, 3, 0, 6);
-    insert_matrix(Hk, zero13, 4, 12, 1, 3, 0, 9);
+    insert_matrix_Nx12(Hk_imu, temp, 4, 12, 1, 3, 0, 0);
+    insert_matrix_Nx12(Hk_imu, zero13, 4, 12, 1, 3, 0, 3);
+    insert_matrix_Nx12(Hk_imu, zero13, 4, 12, 1, 3, 0, 6);
+    insert_matrix_Nx12(Hk_imu, zero13, 4, 12, 1, 3, 0, 9);
 
-    insert_matrix(Hk, zero33, 4, 12, 3, 3, 1, 0);
-    insert_matrix(Hk, I33, 4, 12, 3, 3, 1, 3);
-    insert_matrix(Hk, zero33, 4, 12, 3, 3, 1, 6);
-    insert_matrix(Hk, zero33, 4, 12, 3, 3, 1, 9);
+    insert_matrix_Nx12(Hk_imu, zero33, 4, 12, 3, 3, 1, 0);
+    insert_matrix_Nx12(Hk_imu, I33, 4, 12, 3, 3, 1, 3);
+    insert_matrix_Nx12(Hk_imu, zero33, 4, 12, 3, 3, 1, 6);
+    insert_matrix_Nx12(Hk_imu, zero33, 4, 12, 3, 3, 1, 9);
 
-    return Hk; 
+    return Hk_imu; 
 }
 
 void Estimation::imu_predict(){
@@ -337,8 +337,26 @@ void Estimation::imu_ekf(){
 
 }
 
-void Estimation::ddr_process(){
+void Estimation::insert_matrix_Nx3(float largeMatrix[][3], float smallMatrix[][3], int row, int col) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            largeMatrix[row + i][col + j] = smallMatrix[i][j];
+        }
+    }
+}
 
+Estimation::MatrixNx3Pointer Estimation::ddr_process(float v, float heading){
+    float dt = float(calculate_delta_time()) / 10000.0;
+    
+    float ddr_stm [3][3] = {
+        {1, 0, -v*sin(heading)*dt},
+        {0, 1, v*cos(heading)*dt},
+        {0, 0, 1} 
+    };
+
+    insert_matrix_Nx3(Fk_ddr, ddr_stm, 0, 0);
+
+    return Fk_ddr;
 }
 
 void Estimation::ddr_measurement(){
