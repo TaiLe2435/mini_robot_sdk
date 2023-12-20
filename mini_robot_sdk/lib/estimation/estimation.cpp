@@ -345,6 +345,16 @@ void Estimation::insert_matrix_Nx3(float largeMatrix[][3], float smallMatrix[][3
     }
 }
 
+float* Estimation::unicycle_model(float* f, float v, float w){
+    float dt = float(calculate_delta_time()) / 10000.0;
+    
+    f_ddr[0] = f[0] + v*cos(f[2])*dt;
+    f_ddr[1] = f[1] + v*sin(f[2])*dt;
+    f_ddr[2] = f[2] + w*dt;
+
+    return f_ddr;
+}
+
 // figure out which v to pass | theoretical v we command
 Estimation::MatrixNx3Pointer Estimation::ddr_process(float v, float heading){
     float dt = float(calculate_delta_time()) / 10000.0;

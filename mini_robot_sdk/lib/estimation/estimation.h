@@ -49,9 +49,11 @@ class Estimation {
         
 
         float Fk_ddr[3][3];
+        float f_ddr[3]; 
         float xk_ddr[3];
         float zk_ddr[3]; 
         float Hk_ddr[3][3];
+        float* unicycle_model(float*, float, float);
         // MatrixNx3Pointer ddr_process(float v, float heading);
         float* ddr_measurement(float*);
         // MatrixNx3Pointer ddr_measurement_model();
