@@ -25,6 +25,7 @@ class Estimation {
         MatrixNx3Pointer ddr_measurement_model();
 
         MatrixNx3Pointer matrix_test();
+
     private:
         float phi, theta, psi;
         float phi_0, theta_0, psi_0, psi_IC;
@@ -59,12 +60,13 @@ class Estimation {
         float Qk_ddr[3][3];
         float zk_ddr[3]; 
         float Hk_ddr[3][3];
+        float R_ddr[3][3];
         float* unicycle_model(float, float);
         // MatrixNx3Pointer ddr_process(float v, float heading);
         float* ddr_measurement(float*);
         // MatrixNx3Pointer ddr_measurement_model();
-        void ddr_predict(float, float);
-        void ddr_update();
+        void ddr_predict(float[][3], float[][3], float, float);
+        void ddr_update(float*, float[][3]);
 
         // Matrix stuff
         void insert_matrix_Nx12(float[][12], float[][3], int, int, int, int, int, int);
