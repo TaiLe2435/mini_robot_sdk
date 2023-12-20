@@ -368,6 +368,18 @@ float* Estimation::ddr_measurement(float* pose){ // could just call a pose() fun
     return zk_ddr;
 }
 
+Estimation::MatrixNx3Pointer Estimation::ddr_measurement_model(){
+    float I33[3][3] {
+        {1, 0, 0},
+        {0, 1, 0},
+        {0, 0, 1} 
+    };
+
+    insert_matrix_Nx3(Hk_ddr, I33, 0, 0);
+
+    return Hk_ddr;
+}
+
 void Estimation::ddr_predict(){
 
 }
