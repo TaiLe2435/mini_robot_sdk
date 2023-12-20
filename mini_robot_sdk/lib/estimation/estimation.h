@@ -15,9 +15,10 @@ class Estimation {
         void ddr_ekf();
 
         // tests - these should be deleted/commented out
-        // typedef float (*Matrix12x12Pointer)[12];
+        typedef float (*Matrix12x12Pointer)[12];
         // Matrix12x12Pointer imu_process(float* rpy, float* acc);
-        // Matrix12x12Pointer imu_process_noise(float* rpy);
+        Matrix12x12Pointer imu_process_noise(float* rpy);
+        Matrix12x12Pointer imu_measurement_model(float*);
     private:
         float phi, theta, psi;
         float phi_0, theta_0, psi_0, psi_IC;
@@ -30,12 +31,14 @@ class Estimation {
 
         float Fk[12][12];
         float Gk[12][12];
-        float zk_imu[4][1]; // 
-        typedef float (*Matrix12x12Pointer)[12];
+        float zk_imu[4]; // 
+        float Hk[4][12];
+        // typedef float (*Matrix12x12Pointer)[12];
 
         Matrix12x12Pointer imu_process(float*, float*);
-        Matrix12x12Pointer imu_process_noise(float*);
-        float* imu_measurement(int);
+        // Matrix12x12Pointer imu_process_noise(float*);
+        float* imu_measurement(float, float*, float*);
+        // Matrix12x12Pointer imu_measurement_model(float*);
         void imu_predict();
         void imu_update();
         

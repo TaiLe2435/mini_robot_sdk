@@ -113,6 +113,7 @@ float* Estimation::get_acc(){
     return acc;
 }
 
+// do I need this? Doesn't EKF give this
 // float* Estimation::get_rpy(){
 // //     return 0.0;
 // }
@@ -242,7 +243,7 @@ float I33[3][3] {
     insert_matrix_default(Gk, zero33, 0, 9);
 
     insert_matrix_default(Gk, zero33, 3, 0);
-    insert_matrix_default(Gk,C, 3, 3);
+    insert_matrix_default(Gk, C, 3, 3);
     insert_matrix_default(Gk, zero33, 3, 6);
     insert_matrix_default(Gk, zero33, 3, 9);
 
@@ -259,6 +260,7 @@ float I33[3][3] {
     return Gk;
 }
 
+// not done
 float* Estimation::imu_measurement(float ddr_heading, float* pos_prev, float* a_0){
     // finding heading error
     // float* pose = get_rpy();
@@ -285,6 +287,42 @@ float* Estimation::imu_measurement(float ddr_heading, float* pos_prev, float* a_
     zk_imu[3] = vel[2];
 
     return zk_imu;
+}
+
+Estimation::Matrix12x12Pointer Estimation::imu_measurement_model(float* rpy){
+   float I13[1][3] {
+        {1, 0, 0}
+    };
+   
+   float I33[3][3] {
+        {1, 0, 0},
+        {0, 1, 0},
+        {0, 0, 1} 
+    };
+
+    float zero33[3][3] {0};
+    float zero13[1][3] {0};
+
+    float tR = tan(rpy[0]);
+    float cY = cos(rpy[2]);
+    float sY = sin(rpy[2]);
+
+    float temp[1][3] {tR*cY, tR*sY, -1};
+    
+    // Hjacobian(:,:,i) = [tR*cY tR*sY -1 zero13 zero13 zero13;
+    //             zero33  I33   zero33 zero33];
+
+    insert_matrix(Hk, temp, 4, 12, 1, 3, 0, 0);
+    insert_matrix(Hk, zero13, 4, 12, 1, 3, 0, 3);
+    insert_matrix(Hk, zero13, 4, 12, 1, 3, 0, 6);
+    insert_matrix(Hk, zero13, 4, 12, 1, 3, 0, 9);
+
+    insert_matrix(Hk, zero33, 4, 12, 3, 3, 1, 0);
+    insert_matrix(Hk, I33, 4, 12, 3, 3, 1, 3);
+    insert_matrix(Hk, zero33, 4, 12, 3, 3, 1, 6);
+    insert_matrix(Hk, zero33, 4, 12, 3, 3, 1, 9);
+
+    return Hk; 
 }
 
 void Estimation::imu_predict(){
