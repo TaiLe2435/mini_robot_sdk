@@ -8,8 +8,18 @@
 LSM6 gyroAcc; 
 LIS3MDL mag;
 
+unsigned long oldTime {0}; // used to calculate time step
+
 Estimation::Estimation(){
     
+}
+
+unsigned long Estimation::calculate_delta_time()
+{
+  unsigned long currentTime = millis();
+  unsigned long deltaTime = (currentTime - oldTime);
+  oldTime = currentTime;
+  return deltaTime;
 }
 
 float* Estimation::calib_gyro(){
@@ -249,8 +259,32 @@ float I33[3][3] {
     return Gk;
 }
 
-void Estimation::imu_measurement(){
+float* Estimation::imu_measurement(float ddr_heading, float* pos_prev, float* a_0){
+    // finding heading error
+    // float* pose = get_rpy();
+    float* pose = get_acc(); // waiting for get_rpy function or pose from other EKF
     
+    float posx_current = pose[0];
+    float posy_current = pose[1];
+    
+    float acc_heading = atan2(posx_current - pos_prev[0], posy_current-pos_prev[1]);
+    float heading_error = ddr_heading - acc_heading;
+
+    // finding velocities
+    float* acc = get_acc();
+    float dt = float(calculate_delta_time()) / 10000.0;
+
+    float vel[3] {};
+    vel[0] = acc[0] * dt + a_0[0];
+    vel[1] = acc[1] * dt + a_0[1];
+    vel[2] = acc[2] * dt + a_0[2];
+
+    zk_imu[0] = heading_error;
+    zk_imu[1] = vel[0];
+    zk_imu[2] = vel[1];
+    zk_imu[3] = vel[2];
+
+    return zk_imu;
 }
 
 void Estimation::imu_predict(){
