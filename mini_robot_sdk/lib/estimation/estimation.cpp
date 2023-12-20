@@ -345,6 +345,7 @@ void Estimation::insert_matrix_Nx3(float largeMatrix[][3], float smallMatrix[][3
     }
 }
 
+// figure out which v to pass | from IMU or theoretical v we command?
 Estimation::MatrixNx3Pointer Estimation::ddr_process(float v, float heading){
     float dt = float(calculate_delta_time()) / 10000.0;
     

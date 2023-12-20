@@ -71,37 +71,37 @@ while True:
     # link for HSV stuff
     # https://www.google.com/imgres?imgurl=https%3A%2F%2Fi.stack.imgur.com%2FTSKh8.png&imgrefurl=https%3A%2F%2Fstackoverflow.com%2Fquestions%2F47483951%2Fhow-to-define-a-threshold-value-to-detect-only-green-colour-objects-in-an-image&tbnid=Jx2H1bjYvu6n_M&vet=12ahUKEwiA6p3xp-z3AhXUXM0KHcAtDh4QMygBegUIARDDAQ..i&docid=d4AswGhN6lbYWM&w=720&h=355&q=hsv%20range&ved=2ahUKEwiA6p3xp-z3AhXUXM0KHcAtDh4QMygBegUIARDDAQ
     # https://www.google.com/imgres?imgurl=https%3A%2F%2Fanswers.opencv.org%2Fupfiles%2F15181560142151344.png&imgrefurl=https%3A%2F%2Fanswers.opencv.org%2Fquestion%2F184281%2Fhow-are-hsv-values-interpreted-in-python%2F&tbnid=mpa5ObAswr1QPM&vet=12ahUKEwi2qKKx8oL4AhVaookEHZVJDLQQxiAoAXoECAAQGQ..i&docid=06ORPhgZpk_9yM&w=743&h=477&itg=1&q=hsv%20range&ved=2ahUKEwi2qKKx8oL4AhVaookEHZVJDLQQxiAoAXoECAAQGQ
-    green_lower = np.array([25, 52, 72])             # change upper and lower values for colors
-    green_upper = np.array([83, 255, 255])
-    green_mask = cv2.inRange(hsv, green_lower, green_upper)
+    # green_lower = np.array([25, 52, 72])             # change upper and lower values for colors
+    # green_upper = np.array([83, 255, 255])
+    # green_mask = cv2.inRange(hsv, green_lower, green_upper)
     
     blue_lower = np.array([94, 80, 2])      # 94       # change upper and lower values for colors
     blue_upper = np.array([110, 255, 255])   # 120
     blue_mask = cv2.inRange(hsv, blue_lower, blue_upper)
    
-    # tracking green color
-    contours, hierarchy=cv2.findContours(green_mask,cv2.RETR_EXTERNAL ,cv2.CHAIN_APPROX_TC89_L1)
-    for pic, contour in enumerate(contours):
-        area = cv2.contourArea(contour)
-        maxArea = max(contours, key = cv2.contourArea)
+    # # tracking green color
+    # contours, hierarchy=cv2.findContours(green_mask,cv2.RETR_EXTERNAL ,cv2.CHAIN_APPROX_TC89_L1)
+    # for pic, contour in enumerate(contours):
+    #     area = cv2.contourArea(contour)
+    #     maxArea = max(contours, key = cv2.contourArea)
        
-        # only taking largest area
-        if(area > 10):
-            x, y, w, h = cv2.boundingRect(maxArea)
-            # finding center of target
-            xC = int(x + w/2)
-            yC = int(y + h/2)
-            green_center = (xC, yC)
-            # print(center)
+    #     # only taking largest area
+    #     if(area > 10):
+    #         x, y, w, h = cv2.boundingRect(maxArea)
+    #         # finding center of target
+    #         xC = int(x + w/2)
+    #         yC = int(y + h/2)
+    #         green_center = (xC, yC)
+    #         # print(center)
            
-            # plotting bounding box and center
-            dst = cv2.rectangle(img, (x, y),
-                                    (x + w, y + h),
-                                    (0, 255, 0), 2)
-            cv2.circle(dst, green_center, 10, (0, 255, 0), -1)
-            cv2.putText(dst, "Robot", (x, y),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.0,
-                        (0, 255, 0))
+    #         # plotting bounding box and center
+    #         dst = cv2.rectangle(img, (x, y),
+    #                                 (x + w, y + h),
+    #                                 (0, 255, 0), 2)
+    #         cv2.circle(dst, green_center, 10, (0, 255, 0), -1)
+    #         cv2.putText(dst, "Robot", (x, y),
+    #                     cv2.FONT_HERSHEY_SIMPLEX, 1.0,
+    #                     (0, 255, 0))
  
     # tracking blue color
     contours, hierarchy=cv2.findContours(blue_mask,cv2.RETR_EXTERNAL ,cv2.CHAIN_APPROX_TC89_L1)

@@ -1,48 +1,80 @@
 #include <Arduino.h>
 
 // Header files
-#include "IMU/IMU.h"
-#include "motion/motion.h"
-#include "bluetooth/bluetooth.h"
+#include "IMU.h"
+#include "motion.h"
+#include "bluetooth.h"
+#include "estimation.h"
 
-float gyroCalib[3] {0};
+Estimation imu;
+float* calib {};
 
 void setup() {
+  stop();
+
   Serial.begin(115200);
   Serial.println("setting up :)");
 
-  float* calib = initIMU();
-  gyroCalib[0] = calib[0];
-  gyroCalib[1] = calib[1];
-  gyroCalib[2] = calib[2];
+  calib = imu.calib_gyro();
+  delay(1000);
 
   BTinit();
+  Serial.println("Entering loop ... <(o.o)>");
+  delay(1000);
 }
 
 void loop() {
-  Serial.println("looping ... <(o.o)>");
+  stop();
 
-  int desired = getBT();
+  // int desired = getBT();
 
-  float heading = poseEstimation(gyroCalib[0], gyroCalib[1], gyroCalib[2]);
+//   Estimation::MatrixNx12Pointer states = imu.imu_measurement_model(calib);
 
-  float kP {0.5};
-  if(desired != 9999)
-  {
-    float error = desired - (int)heading;
-    float leftSpeed = 200 + kP*error;
-    float rightSpeed = 200 - kP*error;
-    move_wheels(leftSpeed, rightSpeed);
-  }
-  else if (desired == 9999)
-  {
-    stop();
-  }
-  else
-  {
-    stop();
-    Serial.println("Error in bluetooth data: unknown value received");
-    while(1);
-  }
+//  // Print the elements of the 12x12 matrix
+//     for (int i = 0; i < 4; ++i) {
+//         for (int j = 0; j < 12; ++j) {
+//             Serial.print(states[i][j]);
+//             Serial.print(" ");
+//         }
+//         Serial.println("");
+//     }
+
+  Estimation::MatrixNx3Pointer states = imu.ddr_process(1.0, 1.0);
+
+ // Print the elements of the 3x3 matrix
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            Serial.print(states[i][j]);
+            Serial.print(" ");
+        }
+        Serial.println("");
+    }
+
+  // Serial.println("Gyro data:");
+  // Serial.println(states[0]);
+  // Serial.println(states[1]);
+  // Serial.println(states[2]);
+  delay(5000);
+
+  // float kP {0.5};
+  // if(desired != 9999)
+  // {
+  //   float error = desired - (int)heading;
+  //   float leftSpeed = 200 + kP*error;
+  //   float rightSpeed = 200 - kP*error;
+  //   move_wheels(leftSpeed, rightSpeed);
+  // }
+  // else if (desired == 9999)
+  // {
+  //   stop();
+  // }
+  // else
+  // {
+  //   stop();
+  //   Serial.println("Error in bluetooth data: unknown value received");
+  //   while(1);
+  // }
+
+  return;
 }
 
