@@ -113,7 +113,7 @@ float* Estimation::get_acc(){
     return acc;
 }
 
-// do I need this? Doesn't EKF give this
+// Do I need this? Yes need rpy function that subtracts biases and estimates pose
 // float* Estimation::get_rpy(){
 // //     return 0.0;
 // }
@@ -345,7 +345,7 @@ void Estimation::insert_matrix_Nx3(float largeMatrix[][3], float smallMatrix[][3
     }
 }
 
-// figure out which v to pass | from IMU or theoretical v we command?
+// figure out which v to pass | theoretical v we command
 Estimation::MatrixNx3Pointer Estimation::ddr_process(float v, float heading){
     float dt = float(calculate_delta_time()) / 10000.0;
     
@@ -360,8 +360,12 @@ Estimation::MatrixNx3Pointer Estimation::ddr_process(float v, float heading){
     return Fk_ddr;
 }
 
-void Estimation::ddr_measurement(){
-    
+float* Estimation::ddr_measurement(float* pose){ // could just call a pose() function inside so no parameters
+    zk_ddr[0] = pose[0]; // x
+    zk_ddr[1] = pose[1]; // y
+    zk_ddr[2] = pose[5]; // theta
+
+    return zk_ddr;
 }
 
 void Estimation::ddr_predict(){

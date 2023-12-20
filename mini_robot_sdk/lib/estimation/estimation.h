@@ -17,10 +17,10 @@ class Estimation {
         // tests - these should be deleted/commented out
         typedef float (*MatrixNx12Pointer)[12];
         typedef float (*MatrixNx3Pointer)[3];
-        MatrixNx12Pointer imu_process_model(float* rpy, float* acc);
+        MatrixNx12Pointer imu_process_model(float*, float*);
         MatrixNx12Pointer imu_process_noise(float*);
         MatrixNx12Pointer imu_measurement_model(float*);
-        MatrixNx3Pointer ddr_process(float v, float heading);
+        MatrixNx3Pointer ddr_process(float, float);
     private:
         float phi, theta, psi;
         float phi_0, theta_0, psi_0, psi_IC;
@@ -45,19 +45,19 @@ class Estimation {
         void imu_predict();
         void imu_update();
         
+
         float Fk_ddr[3][3];
         float xk_ddr[3];
         float zk_ddr[3]; 
         float Hk_ddr[3][3];
-
         // MatrixNx3Pointer ddr_process(float v, float heading);
-        void ddr_measurement();
+        float* ddr_measurement(float*);
         void ddr_predict();
         void ddr_update();
 
-        void insert_matrix_Nx12(float largeMatrix[][12], float smallMatrix[][3], int numRowsLg, int numColsLg, int numRowsSm, int numColsSm, int row, int col);
-        void insert_matrix_Nx12_default(float largeMatrix[][12], float smallMatrix[][3], int row, int col);
-        void insert_matrix_Nx3(float largeMatrix[][3], float smallMatrix[][3], int row, int col);
+        void insert_matrix_Nx12(float[][12], float[][3], int, int, int, int, int, int);
+        void insert_matrix_Nx12_default(float[][12], float[][3], int, int);
+        void insert_matrix_Nx3(float[][3], float[][3], int, int);
 };
 
 #endif
