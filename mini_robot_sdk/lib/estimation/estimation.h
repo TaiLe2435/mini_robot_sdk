@@ -23,6 +23,8 @@ class Estimation {
         typedef float (*MatrixNx3Pointer)[3];
         MatrixNx3Pointer ddr_process(float, float);
         MatrixNx3Pointer ddr_measurement_model();
+
+        MatrixNx3Pointer matrix_test();
     private:
         float phi, theta, psi;
         float phi_0, theta_0, psi_0, psi_IC;
@@ -50,19 +52,28 @@ class Estimation {
 
         float Fk_ddr[3][3];
         float f_ddr[3]; 
+        float xk_ddr_prev[3];
         float xk_ddr[3];
+        float P_ddr_prev[3][3];
+        float P_ddr[3][3];
+        float Qk_ddr[3][3];
         float zk_ddr[3]; 
         float Hk_ddr[3][3];
-        float* unicycle_model(float*, float, float);
+        float* unicycle_model(float, float);
         // MatrixNx3Pointer ddr_process(float v, float heading);
         float* ddr_measurement(float*);
         // MatrixNx3Pointer ddr_measurement_model();
-        void ddr_predict();
+        void ddr_predict(float, float);
         void ddr_update();
 
+        // Matrix stuff
         void insert_matrix_Nx12(float[][12], float[][3], int, int, int, int, int, int);
         void insert_matrix_Nx12_default(float[][12], float[][3], int, int);
         void insert_matrix_Nx3(float[][3], float[][3], int, int);
+        void matrix_multiply(float[][3], float[][3], float[][3]);
+        void matrix_add(float[][3], float[][3], float[][3]);
+        void matrix_transpose(float[][3], float[][3]);
+        float temp[3][3];
 };
 
 #endif

@@ -14,13 +14,7 @@ Estimation::Estimation(){
     
 }
 
-unsigned long Estimation::calculate_delta_time()
-{
-  unsigned long currentTime = millis();
-  unsigned long deltaTime = (currentTime - oldTime);
-  oldTime = currentTime;
-  return deltaTime;
-}
+//_____________________________IMU DRIVERS__________________________________________//
 
 float* Estimation::calib_gyro(){
     Wire.begin();
@@ -118,17 +112,7 @@ float* Estimation::get_acc(){
 // //     return 0.0;
 // }
 
-void Estimation::insert_matrix_Nx12(float largeMatrix[][12], float smallMatrix[][3], int numRowsLg, int numColsLg, int numRowsSm, int numColsSm, int row, int col) {
-    for (int i = 0; i < numRowsSm; ++i) {
-        for (int j = 0; j < numColsSm; ++j) {
-            largeMatrix[row + i][col + j] = smallMatrix[i][j];
-        }
-    }
-}
-
-void Estimation::insert_matrix_Nx12_default(float largeMatrix[][12], float smallMatrix[][3], int row, int col) {
-    insert_matrix_Nx12(largeMatrix, smallMatrix, 12, 12, 3, 3, row, col);
-}
+//_____________________________IMU ESTIMATION STUFF__________________________________________//
 
 Estimation::MatrixNx12Pointer Estimation::imu_process_model(float* rpy, float* acc){
     const float betaG {0.2};
@@ -337,20 +321,14 @@ void Estimation::imu_ekf(){
 
 }
 
-void Estimation::insert_matrix_Nx3(float largeMatrix[][3], float smallMatrix[][3], int row, int col) {
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            largeMatrix[row + i][col + j] = smallMatrix[i][j];
-        }
-    }
-}
+//_____________________________ROBOT ESTIMATION STUFF__________________________________________//
 
-float* Estimation::unicycle_model(float* f, float v, float w){
+float* Estimation::unicycle_model(float v, float w){
     float dt = float(calculate_delta_time()) / 10000.0;
     
-    f_ddr[0] = f[0] + v*cos(f[2])*dt;
-    f_ddr[1] = f[1] + v*sin(f[2])*dt;
-    f_ddr[2] = f[2] + w*dt;
+    f_ddr[0] += v*cos(f_ddr[2])*dt;
+    f_ddr[1] += v*sin(f_ddr[2])*dt;
+    f_ddr[2] += w*dt;
 
     return f_ddr;
 }
@@ -390,8 +368,15 @@ Estimation::MatrixNx3Pointer Estimation::ddr_measurement_model(){
     return Hk_ddr;
 }
 
-void Estimation::ddr_predict(){
+void Estimation::ddr_predict(float v, float w){
+    float* states = unicycle_model(v, w);
 
+    xk_ddr_prev[0] = states[0];
+    xk_ddr_prev[1] = states[1];
+    xk_ddr_prev[2] = states[2];
+
+    // Covariance
+    // P_ddr_prev = Fk_ddr*P_ddr*transpose(Fk_ddr) + Qk_ddr;
 }
 
 void Estimation::ddr_update(){
@@ -400,4 +385,83 @@ void Estimation::ddr_update(){
 
 void Estimation::ddr_ekf(){
 
+}
+
+//_____________________________MATRIX STUFF__________________________________________//
+
+void Estimation::insert_matrix_Nx12(float largeMatrix[][12], float smallMatrix[][3], int numRowsLg, int numColsLg, int numRowsSm, int numColsSm, int row, int col) {
+    for (int i = 0; i < numRowsSm; ++i) {
+        for (int j = 0; j < numColsSm; ++j) {
+            largeMatrix[row + i][col + j] = smallMatrix[i][j];
+        }
+    }
+}
+
+void Estimation::insert_matrix_Nx12_default(float largeMatrix[][12], float smallMatrix[][3], int row, int col) {
+    insert_matrix_Nx12(largeMatrix, smallMatrix, 12, 12, 3, 3, row, col);
+}
+
+void Estimation::insert_matrix_Nx3(float largeMatrix[][3], float smallMatrix[][3], int row, int col) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            largeMatrix[row + i][col + j] = smallMatrix[i][j];
+        }
+    }
+}
+
+// Function to multiply two matrices (result = A * B)
+void Estimation::matrix_multiply(float A[][3], float B[][3], float result[][3]) {
+    int i, j, k;
+    for (i = 0; i < 3; ++i) {
+        for (j = 0; j < 3; ++j) {
+            result[i][j] = 0.0;
+            for (k = 0; k < 3; ++k) {
+                result[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
+
+// Function to add two matrices (result = A + B)
+void Estimation::matrix_add(float A[][3], float B[][3], float result[][3]) {
+    int i, j;
+    for (i = 0; i < 3; ++i) {
+        for (j = 0; j < 3; ++j) {
+            result[i][j] = A[i][j] + B[i][j];
+        }
+    }
+}
+
+// Function to transpose a matrix (result = A')
+void Estimation::matrix_transpose(float A[][3], float result[][3]) {
+    int i, j;
+    for (i = 0; i < 3; ++i) {
+        for (j = 0; j < 3; ++j) {
+            result[i][j] = A[j][i];
+        }
+    }
+}
+
+Estimation::MatrixNx3Pointer Estimation::matrix_test(){
+    float I33[3][3] {
+        {1, 2, 3},
+        {4, 5, 6},
+        {7, 8, 9} 
+    };
+
+    matrix_multiply(I33, I33, temp);
+    // matrix_add(I33, I33, temp);
+    // matrix_transpose(I33, temp);
+
+    return temp;
+}
+
+//_____________________________EXTRA STUFF__________________________________________//
+
+unsigned long Estimation::calculate_delta_time()
+{
+  unsigned long currentTime = millis();
+  unsigned long deltaTime = (currentTime - oldTime);
+  oldTime = currentTime;
+  return deltaTime;
 }
