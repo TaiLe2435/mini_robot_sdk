@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <ArduinoEigen.h>
+#include <ArduinoEigenDense.h>
 
 // Header files
 #include "IMU.h"
@@ -39,12 +41,12 @@ void loop() {
 //         Serial.println("");
 //     }
 
-  Estimation::MatrixNx3Pointer states = imu.ddr_process(1.0, 1.0);
+  Eigen::Matrix3d states = imu.matrix_test();
 
  // Print the elements of the 3x3 matrix
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
-            Serial.print(states[i][j]);
+            Serial.print(states(i, j));
             Serial.print(" ");
         }
         Serial.println("");

@@ -3,7 +3,10 @@
 #define estimation_h
 
 #include <Arduino.h>
+#include <ArduinoEigen.h>
+#include <ArduinoEigenDense.h>
 
+using namespace Eigen;
 class Estimation {
     public:
         Estimation();
@@ -24,7 +27,7 @@ class Estimation {
         MatrixNx3Pointer ddr_process(float, float);
         MatrixNx3Pointer ddr_measurement_model();
 
-        MatrixNx3Pointer matrix_test();
+        Matrix3d matrix_test();
 
     private:
         float phi, theta, psi;
@@ -66,7 +69,7 @@ class Estimation {
         float* ddr_measurement(float*);
         // MatrixNx3Pointer ddr_measurement_model();
         void ddr_predict(float[][3], float[][3], float, float);
-        void ddr_update(float*, float[][3]);
+        void ddr_update(float*, float*, float[][3]);
 
         // Matrix stuff
         void insert_matrix_Nx12(float[][12], float[][3], int, int, int, int, int, int);

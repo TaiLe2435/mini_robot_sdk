@@ -4,6 +4,10 @@
 #include <Wire.h> // I2C lib
 #include <LSM6.h> // Accel and Gyro lib
 #include <LIS3MDL.h> // Magnetometer lib
+#include <ArduinoEigen.h>
+#include <ArduinoEigenDense.h>
+
+using namespace Eigen;
 
 LSM6 gyroAcc; 
 LIS3MDL mag;
@@ -385,7 +389,7 @@ void Estimation::ddr_predict(float Fk[][3], float P[][3], float v, float w){
     matrix_add(P_ddr_prev, Qk_ddr, P_ddr_prev); // Fk*P*Fk' + Qk
 }
 
-void Estimation::ddr_update(float* xk_prev, float P_prev[][3]){
+void Estimation::ddr_update(float* xk_prev, float* xk, float P_prev[][3]){
 
     MatrixNx3Pointer Hk = ddr_measurement_model();
 
@@ -397,6 +401,20 @@ void Estimation::ddr_update(float* xk_prev, float P_prev[][3]){
     matrix_multiply(Hk, P_prev, S);
     matrix_multiply(S, Hk_T, S);
     matrix_add(S, R_ddr, S);
+
+    float pose[6] {}; // need to change this
+    float* zh = xk; // and this to Hk*xk
+    float* z = ddr_measurement(pose);
+
+    float innovation[3] {};
+    innovation[0] = z[0] - zh[0]; // innov = z - H*x
+    innovation[1] = z[1] - zh[1];
+    innovation[0] = z[2] - zh[2];
+
+    float K[3][3] {};
+    matrix_multiply(P_prev, Hk_T, K);
+
+
 }
 
 void Estimation::ddr_ekf(){
@@ -458,14 +476,30 @@ void Estimation::matrix_transpose(float A[][3], float result[][3]) {
     }
 }
 
-Estimation::MatrixNx3Pointer Estimation::matrix_test(){
-    float I33[3][3] {
-        {1, 2, 3},
-        {4, 5, 6},
-        {7, 8, 9} 
-    };
+Matrix3d Estimation::matrix_test(){
+    // float I33[3][3] {
+    //     {1, 2, 3},
+    //     {4, 5, 6},
+    //     {7, 8, 9} 
+    // };
 
-    matrix_multiply(I33, I33, temp);
+    Matrix3d m = Matrix3d::Identity();
+    Matrix3d n = Matrix3d::Identity();
+
+    m << 
+        1, 2, 3,
+        4, 5, 6,
+        7, 8, 9;
+
+    n << 
+        1, 2, 3,
+        4, 5, 6,
+        7, 8, 9;
+
+    Matrix3d temp = m * n;
+
+
+    // matrix_multiply(I33, I33, temp);
     // matrix_add(I33, I33, temp);
     // matrix_transpose(I33, temp);
 
