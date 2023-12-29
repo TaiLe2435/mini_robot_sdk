@@ -118,23 +118,9 @@ float* Estimation::get_acc(){
 
 //_____________________________IMU ESTIMATION STUFF__________________________________________//
 
-Estimation::MatrixNx12Pointer Estimation::imu_process_model(float* rpy, float* acc){
+MatrixXd Estimation::imu_process_model(float* rpy, float* acc){
     const float betaG {0.2};
     const float betaA {0.2};
-
-    float betaGI33[3][3] {
-        {-betaG, 0, 0},
-        {0, -betaG, 0},
-        {0, 0, -betaG} 
-    };
-
-    float betaAI33[3][3] {
-        { -betaA, 0, 0 },
-        { 0, -betaA, 0 },
-        { 0, 0, -betaA }
-    };
-
-    float zero33[3][3] {0};
 
     float cR = cos(rpy[0]);
     float sR = sin(rpy[0]);
@@ -143,49 +129,30 @@ Estimation::MatrixNx12Pointer Estimation::imu_process_model(float* rpy, float* a
     float cY = cos(rpy[2]);
     float sY = sin(rpy[2]);
 
-    float C[3][3] {
-        { cP*cY, sP*sR*cY-cR*sY, cR*sP*cY+sR*sY },
-        { cP*sY, sR*sP*sY+cR*cY, cR*sP*sY-cY*sR },
-        { -sP, sR*cP, cR*cP }
-    };
+    Matrix3d C;
+    C << cP*cY, sP*sR*cY-cR*sY, cR*sP*cY+sR*sY,
+        cP*sY, sR*sP*sY+cR*cY, cR*sP*sY-cY*sR,
+        -sP, sR*cP, cR*cP;
 
-    float neg_C[3][3] {
-        { -cP*cY, -sP*sR*cY+cR*sY, -cR*sP*cY-sR*sY },
-        { -cP*sY, -sR*sP*sY-cR*cY, -cR*sP*sY+cY*sR },
-        { sP, -sR*cP, -cR*cP }
-    };
+    Matrix3d neg_C = -C;
 
-    float S[3][3] {
-        { 0, -acc[2], acc[1] },
-        { acc[2], 0, -acc[0] },
-        { -acc[1], acc[0], 0 }
-    };
-
+    Matrix3d S;
+    S << 0, -acc[2], acc[1],
+         acc[2], 0, -acc[0],
+         -acc[1], acc[0], 0;
     
     // Fk(:,:,i) = [zero33 zero33    -C      zero33;
     //         S  zero33   zero33      C;
     //       zero33 zero33 -betaG*I33   zero33;
     //       zero33 zero33   zero33   -betaA*I33];
 
-    insert_matrix_Nx12_default(Fk_imu, zero33, 0, 0);
-    insert_matrix_Nx12_default(Fk_imu, zero33, 0, 3);
-    insert_matrix_Nx12_default(Fk_imu, neg_C, 0, 6);
-    insert_matrix_Nx12_default(Fk_imu, zero33, 0, 9);
+    Fk_imu.setZero();
 
-    insert_matrix_Nx12_default(Fk_imu, S, 3, 0);
-    insert_matrix_Nx12_default(Fk_imu, zero33, 3, 3);
-    insert_matrix_Nx12_default(Fk_imu, zero33, 3, 6);
-    insert_matrix_Nx12_default(Fk_imu, C, 3, 9);
-
-    insert_matrix_Nx12_default(Fk_imu, zero33, 6, 0);
-    insert_matrix_Nx12_default(Fk_imu, zero33, 6, 3);
-    insert_matrix_Nx12_default(Fk_imu, betaGI33, 6, 6);
-    insert_matrix_Nx12_default(Fk_imu, zero33, 6, 9);
-
-    insert_matrix_Nx12_default(Fk_imu, zero33, 9, 0);
-    insert_matrix_Nx12_default(Fk_imu, zero33, 9, 3);
-    insert_matrix_Nx12_default(Fk_imu, zero33, 9, 6);
-    insert_matrix_Nx12_default(Fk_imu, betaAI33, 9, 9);
+    Fk_imu.block<3,3>(0,6) = -C;
+    Fk_imu.block<3,3>(3,0) = S;
+    Fk_imu.block<3,3>(3,9) = C;
+    Fk_imu.block<3,3>(6,6) = -betaG * Matrix3d::Identity();
+    Fk_imu.block<3,3>(9,9) = -betaA * Matrix3d::Identity();
 
     return Fk_imu;
 }
@@ -422,7 +389,7 @@ void Estimation::ddr_ekf(){
 }
 
 //_____________________________MATRIX STUFF__________________________________________//
-
+// Deprecated. Using ArduinoEigen now
 void Estimation::insert_matrix_Nx12(float largeMatrix[][12], float smallMatrix[][3], int numRowsLg, int numColsLg, int numRowsSm, int numColsSm, int row, int col) {
     for (int i = 0; i < numRowsSm; ++i) {
         for (int j = 0; j < numColsSm; ++j) {

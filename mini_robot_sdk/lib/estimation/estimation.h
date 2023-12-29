@@ -18,8 +18,9 @@ class Estimation {
         void ddr_ekf();
 
         // tests - these should be deleted/commented out
-        typedef float (*MatrixNx12Pointer)[12];        
-        MatrixNx12Pointer imu_process_model(float*, float*);
+        typedef float (*MatrixNx12Pointer)[12];
+           
+        MatrixXd imu_process_model(float*, float*);
         MatrixNx12Pointer imu_process_noise(float*);
         MatrixNx12Pointer imu_measurement_model(float*);
 
@@ -39,7 +40,7 @@ class Estimation {
         float gyro[3];
         float acc[3];
 
-        float Fk_imu[12][12];
+        MatrixXd Fk_imu{12, 12};
         float Gk_imu[12][12];
         float xk_imu[12];
         float zk_imu[4]; 
