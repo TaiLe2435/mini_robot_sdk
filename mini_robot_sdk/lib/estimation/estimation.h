@@ -41,16 +41,19 @@ class Estimation {
 
         MatrixXd Fk_imu{12, 12};
         MatrixXd Gk_imu{12, 12};
-        float xk_imu[12];
-        float zk_imu[4]; 
+        VectorXd xk_imu_prev{12};
+        VectorXd xk_imu{12};
+        MatrixXd P_imu_prev{12,12};
+        MatrixXd P_imu{12,12};
+        Vector4d zk_imu; 
         MatrixXd Hk_imu{4, 12};
 
         MatrixXd imu_process_model(float*, float*);
         MatrixXd imu_process_noise(float*);
-        float* imu_measurement(float, float*, float*);
+        Vector4d imu_measurement(float, float*, float*);
         MatrixXd imu_measurement_model(float*);
-        void imu_predict();
-        void imu_update();
+        void imu_predict(VectorXd, MatrixXd, MatrixXd, MatrixXd, MatrixXd);
+        void imu_update(float*);
         
 
         Matrix3d Fk_ddr;

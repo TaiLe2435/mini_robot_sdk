@@ -228,12 +228,43 @@ MatrixXd Estimation::imu_measurement_model(float* rpy){
     return Hk_imu; 
 }
 
-void Estimation::imu_predict(){
+void Estimation::imu_predict(VectorXd xk, MatrixXd Fk, MatrixXd P, MatrixXd Gk, MatrixXd Qk){
+    xk_imu_prev = xk + Fk*(xk - xk_imu_prev);
 
+    MatrixXd Fk_T{12,12};
+    MatrixXd Gk_T{12,12};
+    Fk_T = Fk.transpose();
+    Gk_T = Gk.transpose();
+
+    P_imu_prev = Fk*P*Fk_T + Gk*Qk*Gk_T;
 }
 
-void Estimation::imu_update(){
+void Estimation::imu_update(float* rpy){
+    MatrixXd Hk{12,12};
+    Hk = imu_measurement_model(rpy);
+
     
+    Matrix3d Hk = ddr_measurement_model();
+
+    // Innovation Covariance
+    // S = Hk*P_*Hk' + R;
+
+    Matrix3d S, Hk_T;
+    Hk_T = Hk.transpose();
+    S = Hk*P_prev*Hk_T + R_ddr;
+
+    float pose[6] {}; // need to change this
+    Vector3d zh = xk; // and this to Hk*xk
+    Vector3d z = ddr_measurement(pose);
+
+    Vector3d innovation;
+    innovation << z[0] - zh[0], z[1] - zh[1], z[2] - zh[2]; // innov = z - H*x
+
+    Matrix3d K;
+    K = P_prev * Hk_T * S.inverse();
+
+    xk_ddr = xk_prev + K*innovation;
+    P_ddr = (Matrix3d::Identity() - K*Hk) * P_prev;
 }
 
 void Estimation::imu_ekf(){
