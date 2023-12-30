@@ -24,7 +24,7 @@ class Estimation {
 
         typedef float (*MatrixNx3Pointer)[3];
         Matrix3d ddr_process(float, float);
-        MatrixNx3Pointer ddr_measurement_model();
+        Matrix3d ddr_measurement_model();
 
         Matrix3d matrix_test();
 
@@ -60,7 +60,7 @@ class Estimation {
         float P_ddr[3][3];
         float Qk_ddr[3][3];
         float zk_ddr[3]; 
-        float Hk_ddr[3][3];
+        Matrix3d Hk_ddr;
         float R_ddr[3][3];
         float* unicycle_model(float, float);
         // MatrixNx3Pointer ddr_process(float v, float heading);

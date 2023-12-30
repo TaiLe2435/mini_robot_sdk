@@ -274,59 +274,53 @@ float* Estimation::ddr_measurement(float* pose){ // could just call a pose() fun
     return zk_ddr;
 }
 
-Estimation::MatrixNx3Pointer Estimation::ddr_measurement_model(){
-    float I33[3][3] {
-        {1, 0, 0},
-        {0, 1, 0},
-        {0, 0, 1} 
-    };
-
-    insert_matrix_Nx3(Hk_ddr, I33, 0, 0);
+Matrix3d Estimation::ddr_measurement_model(){ // could just delete and set Hk_ddr as a constant that doesnt get accessed 
+    Hk_ddr.setIdentity();
 
     return Hk_ddr;
 }
 
 void Estimation::ddr_predict(float Fk[][3], float P[][3], float v, float w){
     
-    // States
-    float* states = unicycle_model(v, w);
-    xk_ddr_prev[0] = states[0];
-    xk_ddr_prev[1] = states[1];
-    xk_ddr_prev[2] = states[2];
+    // // States
+    // float* states = unicycle_model(v, w);
+    // xk_ddr_prev[0] = states[0];
+    // xk_ddr_prev[1] = states[1];
+    // xk_ddr_prev[2] = states[2];
 
-    // Covariance
-    // P_prev = Fk*P*Fk' + Qk;
-    float Fk_T[3][3] {};
-    matrix_transpose(Fk, Fk_T); // Fk'
-    matrix_multiply(Fk, P, P_ddr_prev); // Fk*P
-    matrix_multiply(P_ddr_prev, Fk_T, P_ddr_prev); // Fk*P*Fk'
-    matrix_add(P_ddr_prev, Qk_ddr, P_ddr_prev); // Fk*P*Fk' + Qk
+    // // Covariance
+    // // P_prev = Fk*P*Fk' + Qk;
+    // float Fk_T[3][3] {};
+    // matrix_transpose(Fk, Fk_T); // Fk'
+    // matrix_multiply(Fk, P, P_ddr_prev); // Fk*P
+    // matrix_multiply(P_ddr_prev, Fk_T, P_ddr_prev); // Fk*P*Fk'
+    // matrix_add(P_ddr_prev, Qk_ddr, P_ddr_prev); // Fk*P*Fk' + Qk
 }
 
 void Estimation::ddr_update(float* xk_prev, float* xk, float P_prev[][3]){
 
-    MatrixNx3Pointer Hk = ddr_measurement_model();
+    // MatrixNx3Pointer Hk = ddr_measurement_model();
 
-    // Innovation Covariance
-    // S = Hk*P_*Hk' + R;
+    // // Innovation Covariance
+    // // S = Hk*P_*Hk' + R;
 
-    float S[3][3], Hk_T[3][3];
-    matrix_transpose(Hk, Hk_T);
-    matrix_multiply(Hk, P_prev, S);
-    matrix_multiply(S, Hk_T, S);
-    matrix_add(S, R_ddr, S);
+    // float S[3][3], Hk_T[3][3];
+    // matrix_transpose(Hk, Hk_T);
+    // matrix_multiply(Hk, P_prev, S);
+    // matrix_multiply(S, Hk_T, S);
+    // matrix_add(S, R_ddr, S);
 
-    float pose[6] {}; // need to change this
-    float* zh = xk; // and this to Hk*xk
-    float* z = ddr_measurement(pose);
+    // float pose[6] {}; // need to change this
+    // float* zh = xk; // and this to Hk*xk
+    // float* z = ddr_measurement(pose);
 
-    float innovation[3] {};
-    innovation[0] = z[0] - zh[0]; // innov = z - H*x
-    innovation[1] = z[1] - zh[1];
-    innovation[0] = z[2] - zh[2];
+    // float innovation[3] {};
+    // innovation[0] = z[0] - zh[0]; // innov = z - H*x
+    // innovation[1] = z[1] - zh[1];
+    // innovation[0] = z[2] - zh[2];
 
-    float K[3][3] {};
-    matrix_multiply(P_prev, Hk_T, K);
+    // float K[3][3] {};
+    // matrix_multiply(P_prev, Hk_T, K);
 
 
 }

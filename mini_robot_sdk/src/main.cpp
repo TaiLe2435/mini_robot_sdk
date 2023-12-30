@@ -42,7 +42,7 @@ void loop() {
 //         Serial.println("");
 //     }
 
-  Eigen::Matrix3d states = imu.ddr_process(1, 1);
+  Eigen::Matrix3d states = imu.ddr_measurement_model();
 
  // Print the elements of the 3x3 matrix
     for (int i = 0; i < states.rows(); ++i) {
