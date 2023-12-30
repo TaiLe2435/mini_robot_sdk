@@ -185,7 +185,7 @@ MatrixXd Estimation::imu_process_noise(float* rpy){
 }
 
 // not done
-float* Estimation::imu_measurement(float ddr_heading, float* pos_prev, float* a_0){
+Vector4d Estimation::imu_measurement(float ddr_heading, float* pos_prev, float* a_0){
     // finding heading error
     // float* pose = get_rpy();
     float* pose = get_acc(); // waiting for get_rpy function or pose from other EKF
@@ -205,10 +205,7 @@ float* Estimation::imu_measurement(float ddr_heading, float* pos_prev, float* a_
     vel[1] = acc[1] * dt + a_0[1];
     vel[2] = acc[2] * dt + a_0[2];
 
-    zk_imu[0] = heading_error;
-    zk_imu[1] = vel[0];
-    zk_imu[2] = vel[1];
-    zk_imu[3] = vel[2];
+    zk_imu<< heading_error, vel[0], vel[1], vel[2];
 
     return zk_imu;
 }
