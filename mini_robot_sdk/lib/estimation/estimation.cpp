@@ -321,8 +321,42 @@ void Estimation::ddr_update(Vector3d xk_prev, Vector3d xk, Matrix3d P_prev){
 
 }
 
-void Estimation::ddr_ekf(){
+Vector3d Estimation::ddr_ekf(float v, float w, float* pose){
+    Vector3d f = unicycle_model(v, w);
 
+    Matrix3d Fk = ddr_process(v, pose[5]); // v and heading
+
+    float dt = float(calculate_delta_time()) / 10000.0;
+    MatrixXd Wk {3, 2};
+    MatrixXd Wk_T {2, 3};
+    Wk << cos(pose[5]) * dt, 0,
+          sin(pose[3]) * dt, 0,
+          0, dt;
+    Wk_T = Wk.transpose();
+    
+    Matrix2d Qk;
+    Qk << 0.05, 0,
+         0 , 0.05;
+
+    Matrix3d Q;
+    Q = Wk * Qk * Wk_T;
+
+    Vector3d h = ddr_measurement(pose);
+
+    Matrix3d Hk = ddr_measurement_model();
+
+    Matrix3d Rk;
+    Rk << 0.2, 0, 0,
+          0, 0.2, 0,
+          0, 0, (M_PI/16)*(M_PI/16); 
+
+    // gives xk_ddr and P_ddr members
+    ddr_update(xk_ddr_prev, xk_ddr, P_ddr_prev);
+
+    // gives xk_ddr_prev and P_ddr_prev members
+    ddr_predict(Fk_ddr, P_ddr, v, w);
+
+    return xk_ddr;
 }
 
 //_____________________________MATRIX STUFF__________________________________________//
