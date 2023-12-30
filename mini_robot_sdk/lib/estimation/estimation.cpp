@@ -266,8 +266,27 @@ void Estimation::imu_update(VectorXd xk_prev, VectorXd xk, MatrixXd P_prev, floa
     P_imu = (I.setIdentity() - K*Hk) * P_prev;
 }
 
-void Estimation::imu_ekf(){
+VectorXd Estimation::imu_ekf(float* rpy, float* pos_prev, float* a, float* a_0){
+    MatrixXd Fk{12,12}, Gk{12,12}, Q{12,12};
+    Fk = imu_process_model(rpy, a); // maybe make it so they're called in 
+    Gk = imu_process_noise(rpy);    // predict and update
 
+    Q.setZero();
+    Q.block<3,3>(0,0) = M_PI/16 * Matrix3d::Identity();
+    Q.block<9,9>(3,3) = 0.1 * Matrix3d::Identity();
+ 
+    R_imu << (M_PI/16)*(M_PI/16), 0, 0, 0,
+                0, (0.6)*(0.6), 0, 0,
+                0, 0, (0.6)*(0.6), 0,
+                0, 0, 0, (0.6)*(0.6);
+
+    // gives xk_imu and P_imu members
+    imu_update(xk_imu_prev, xk_imu, P_imu_prev, rpy, pos_prev, a_0);
+
+    // gives xk_imu_prev and P_imu_prev members
+    imu_predict(xk_imu, Fk, P_imu, Gk);
+
+    return xk_imu;
 }
 
 //_____________________________ROBOT ESTIMATION STUFF__________________________________________//

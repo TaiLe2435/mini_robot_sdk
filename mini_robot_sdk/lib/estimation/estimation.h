@@ -14,7 +14,7 @@ class Estimation {
         float* get_gyro(float*);
         float* get_acc();
         // float* get_rpy();
-        void imu_ekf();
+        VectorXd imu_ekf(float*, float*, float*, float*);
         Vector3d ddr_ekf(float, float, float*);
 
         // tests - these should be deleted/commented out           
@@ -74,15 +74,6 @@ class Estimation {
         // MatrixNx3Pointer ddr_measurement_model();
         void ddr_predict(Matrix3d, float, float, float*);
         void ddr_update(Vector3d, Vector3d, Matrix3d);
-
-        // Matrix stuff | Using ArduinoEigen now
-        void insert_matrix_Nx12(float[][12], float[][3], int, int, int, int, int, int);
-        void insert_matrix_Nx12_default(float[][12], float[][3], int, int);
-        void insert_matrix_Nx3(float[][3], float[][3], int, int);
-        void matrix_multiply(float[][3], float[][3], float[][3]);
-        void matrix_add(float[][3], float[][3], float[][3]);
-        void matrix_transpose(float[][3], float[][3]);
-        float temp[3][3];
 };
 
 #endif
