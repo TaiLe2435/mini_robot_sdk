@@ -256,16 +256,12 @@ float* Estimation::unicycle_model(float v, float w){
 }
 
 // figure out which v to pass | theoretical v we command
-Estimation::MatrixNx3Pointer Estimation::ddr_process(float v, float heading){
+Matrix3d Estimation::ddr_process(float v, float heading){
     float dt = float(calculate_delta_time()) / 10000.0;
     
-    float ddr_stm [3][3] = {
-        {1, 0, -v*sin(heading)*dt},
-        {0, 1, v*cos(heading)*dt},
-        {0, 0, 1} 
-    };
-
-    insert_matrix_Nx3(Fk_ddr, ddr_stm, 0, 0);
+    Fk_ddr << 1, 0, -v*sin(heading)*dt,
+               0, 1, v*cos(heading)*dt,
+               0, 0, 1;
 
     return Fk_ddr;
 }

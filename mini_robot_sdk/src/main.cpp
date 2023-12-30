@@ -30,28 +30,28 @@ void loop() {
 
   // int desired = getBT();
 
-  Eigen::MatrixXd states {12,12};
-  states = imu.imu_measurement_model(calib);
+//   Eigen::MatrixXd states {12,12};
+//   states = imu.imu_measurement_model(calib);
 
- // Print the elements of the 12x12 matrix
-    for (int i = 0; i < states.rows(); ++i) {
-        for (int j = 0; j < states.cols(); ++j) {
-            Serial.print(states(i,j));
-            Serial.print(" ");
-        }
-        Serial.println("");
-    }
-
-//   Eigen::Matrix3d states = imu.matrix_test();
-
-//  // Print the elements of the 3x3 matrix
-//     for (int i = 0; i < 3; ++i) {
-//         for (int j = 0; j < 3; ++j) {
-//             Serial.print(states(i, j));
+//  // Print the elements of the 12x12 matrix
+//     for (int i = 0; i < states.rows(); ++i) {
+//         for (int j = 0; j < states.cols(); ++j) {
+//             Serial.print(states(i,j));
 //             Serial.print(" ");
 //         }
 //         Serial.println("");
 //     }
+
+  Eigen::Matrix3d states = imu.ddr_process(1, 1);
+
+ // Print the elements of the 3x3 matrix
+    for (int i = 0; i < states.rows(); ++i) {
+        for (int j = 0; j < states.cols(); ++j) {
+            Serial.print(states(i, j));
+            Serial.print(" ");
+        }
+        Serial.println("");
+    }
 
   // Serial.println("Gyro data:");
   // Serial.println(states[0]);

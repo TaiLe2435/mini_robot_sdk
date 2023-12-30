@@ -17,15 +17,13 @@ class Estimation {
         void imu_ekf();
         void ddr_ekf();
 
-        // tests - these should be deleted/commented out
-        typedef float (*MatrixNx12Pointer)[12];
-           
-        MatrixXd imu_process_model(float*, float*);
-        MatrixXd imu_process_noise(float*);
-        MatrixXd imu_measurement_model(float*);
+        // tests - these should be deleted/commented out           
+        // MatrixXd imu_process_model(float*, float*);
+        // MatrixXd imu_process_noise(float*);
+        // MatrixXd imu_measurement_model(float*);
 
         typedef float (*MatrixNx3Pointer)[3];
-        MatrixNx3Pointer ddr_process(float, float);
+        Matrix3d ddr_process(float, float);
         MatrixNx3Pointer ddr_measurement_model();
 
         Matrix3d matrix_test();
@@ -45,17 +43,16 @@ class Estimation {
         float xk_imu[12];
         float zk_imu[4]; 
         MatrixXd Hk_imu{4, 12};
-        // typedef float (*MatrixNx12Pointer)[12];
 
-        // MatrixNx12Pointer imu_process_model(float*, float*);
-        // MatrixNx12Pointer imu_process_noise(float*);
+        MatrixXd imu_process_model(float*, float*);
+        MatrixXd imu_process_noise(float*);
         float* imu_measurement(float, float*, float*);
-        // MatrixNx12Pointer imu_measurement_model(float*);
+        MatrixXd imu_measurement_model(float*);
         void imu_predict();
         void imu_update();
         
 
-        float Fk_ddr[3][3];
+        Matrix3d Fk_ddr;
         float f_ddr[3]; 
         float xk_ddr_prev[3];
         float xk_ddr[3];
