@@ -245,7 +245,7 @@ void Estimation::imu_ekf(){
 
 //_____________________________ROBOT ESTIMATION STUFF__________________________________________//
 
-float* Estimation::unicycle_model(float v, float w){
+Vector3d Estimation::unicycle_model(float v, float w){
     float dt = float(calculate_delta_time()) / 10000.0;
     
     f_ddr[0] += v*cos(f_ddr[2])*dt;
@@ -266,7 +266,7 @@ Matrix3d Estimation::ddr_process(float v, float heading){
     return Fk_ddr;
 }
 
-float* Estimation::ddr_measurement(float* pose){ // could just call a pose() function inside so no parameters
+Vector3d Estimation::ddr_measurement(float* pose){ // could just call a pose() function inside so no parameters
     zk_ddr[0] = pose[0]; // x
     zk_ddr[1] = pose[1]; // y
     zk_ddr[2] = pose[5]; // theta
@@ -280,48 +280,44 @@ Matrix3d Estimation::ddr_measurement_model(){ // could just delete and set Hk_dd
     return Hk_ddr;
 }
 
-void Estimation::ddr_predict(float Fk[][3], float P[][3], float v, float w){
+void Estimation::ddr_predict(Matrix3d Fk, Matrix3d P, float v, float w){
     
-    // // States
-    // float* states = unicycle_model(v, w);
-    // xk_ddr_prev[0] = states[0];
-    // xk_ddr_prev[1] = states[1];
-    // xk_ddr_prev[2] = states[2];
+    // States
+    Vector3d states = unicycle_model(v, w);
+    xk_ddr_prev[0] = states[0];
+    xk_ddr_prev[1] = states[1];
+    xk_ddr_prev[2] = states[2];
 
-    // // Covariance
-    // // P_prev = Fk*P*Fk' + Qk;
-    // float Fk_T[3][3] {};
-    // matrix_transpose(Fk, Fk_T); // Fk'
-    // matrix_multiply(Fk, P, P_ddr_prev); // Fk*P
-    // matrix_multiply(P_ddr_prev, Fk_T, P_ddr_prev); // Fk*P*Fk'
-    // matrix_add(P_ddr_prev, Qk_ddr, P_ddr_prev); // Fk*P*Fk' + Qk
+    // Covariance
+    // P_prev = Fk*P*Fk' + Qk;
+    Matrix3d Fk_T;
+    Fk_T = Fk.transpose(); // Fk'
+    P_ddr_prev = Fk*P*Fk_T + Qk_ddr;
 }
 
-void Estimation::ddr_update(float* xk_prev, float* xk, float P_prev[][3]){
+void Estimation::ddr_update(Vector3d xk_prev, Vector3d xk, Matrix3d P_prev){
 
-    // MatrixNx3Pointer Hk = ddr_measurement_model();
+    Matrix3d Hk = ddr_measurement_model();
 
-    // // Innovation Covariance
-    // // S = Hk*P_*Hk' + R;
+    // Innovation Covariance
+    // S = Hk*P_*Hk' + R;
 
-    // float S[3][3], Hk_T[3][3];
-    // matrix_transpose(Hk, Hk_T);
-    // matrix_multiply(Hk, P_prev, S);
-    // matrix_multiply(S, Hk_T, S);
-    // matrix_add(S, R_ddr, S);
+    Matrix3d S, Hk_T;
+    Hk_T = Hk.transpose();
+    S = Hk*P_prev*Hk_T + R_ddr;
 
-    // float pose[6] {}; // need to change this
-    // float* zh = xk; // and this to Hk*xk
-    // float* z = ddr_measurement(pose);
+    float pose[6] {}; // need to change this
+    Vector3d zh = xk; // and this to Hk*xk
+    Vector3d z = ddr_measurement(pose);
 
-    // float innovation[3] {};
-    // innovation[0] = z[0] - zh[0]; // innov = z - H*x
-    // innovation[1] = z[1] - zh[1];
-    // innovation[0] = z[2] - zh[2];
+    Vector3d innovation;
+    innovation << z[0] - zh[0], z[1] - zh[1], z[2] - zh[2]; // innov = z - H*x
 
-    // float K[3][3] {};
-    // matrix_multiply(P_prev, Hk_T, K);
+    Matrix3d K;
+    K = P_prev * Hk_T * S.inverse();
 
+    xk_ddr = xk_prev + K*innovation;
+    P_ddr = (Matrix3d::Identity() - K*Hk) * P_prev;
 
 }
 

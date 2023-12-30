@@ -22,9 +22,10 @@ class Estimation {
         // MatrixXd imu_process_noise(float*);
         // MatrixXd imu_measurement_model(float*);
 
-        typedef float (*MatrixNx3Pointer)[3];
         Matrix3d ddr_process(float, float);
         Matrix3d ddr_measurement_model();
+        Vector3d unicycle_model(float, float);
+        Vector3d ddr_measurement(float*);
 
         Matrix3d matrix_test();
 
@@ -53,21 +54,22 @@ class Estimation {
         
 
         Matrix3d Fk_ddr;
-        float f_ddr[3]; 
-        float xk_ddr_prev[3];
-        float xk_ddr[3];
-        float P_ddr_prev[3][3];
-        float P_ddr[3][3];
-        float Qk_ddr[3][3];
-        float zk_ddr[3]; 
+        Vector3d f_ddr{f_ddr[0], f_ddr[1], f_ddr[2]}; 
+        Vector3d xk_ddr_prev{xk_ddr_prev[0], xk_ddr_prev[1], xk_ddr_prev[2]};
+        Vector3d xk_ddr;
+        Matrix3d P_ddr_prev;
+        Matrix3d P_ddr;
+        Matrix3d Qk_ddr; // need to define this
+        Vector3d zk_ddr{zk_ddr[0], zk_ddr[1], zk_ddr[2]}; 
         Matrix3d Hk_ddr;
-        float R_ddr[3][3];
-        float* unicycle_model(float, float);
+        Matrix3d R_ddr; // need to define this
+
+        // Vector3d unicycle_model(float, float);
         // MatrixNx3Pointer ddr_process(float v, float heading);
-        float* ddr_measurement(float*);
+        // Vector3d ddr_measurement(float*);
         // MatrixNx3Pointer ddr_measurement_model();
-        void ddr_predict(float[][3], float[][3], float, float);
-        void ddr_update(float*, float*, float[][3]);
+        void ddr_predict(Matrix3d, Matrix3d, float, float);
+        void ddr_update(Vector3d, Vector3d, Matrix3d);
 
         // Matrix stuff
         void insert_matrix_Nx12(float[][12], float[][3], int, int, int, int, int, int);
