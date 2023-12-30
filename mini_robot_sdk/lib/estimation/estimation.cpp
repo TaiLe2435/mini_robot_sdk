@@ -239,7 +239,7 @@ void Estimation::imu_predict(VectorXd xk, MatrixXd Fk, MatrixXd P, MatrixXd Gk, 
     P_imu_prev = Fk*P*Fk_T + Gk*Qk*Gk_T;
 }
 
-void Estimation::imu_update(float* rpy){
+void Estimation::imu_update(VectorXd xk_prev, VectorXd xk, MatrixXd P_prev, float* rpy, float* pos_prev, float* a_0){
     MatrixXd Hk{4,12}, Hk_T{12,4};
     Hk = imu_measurement_model(rpy);
 
@@ -248,20 +248,22 @@ void Estimation::imu_update(float* rpy){
 
     Matrix4d S{4,4};
     Hk_T = Hk.transpose();
-    S = Hk*P_prev*Hk_T + R;
+    S = Hk*P_prev*Hk_T + R_imu;
 
-    float pose[6] {}; // need to change this
-    Vector3d zh = xk; // and this to Hk*xk
-    Vector3d z = ddr_measurement(pose);
+    Vector4d zh;
+    zh = Hk*xk;
+    Vector4d z;
+    z = imu_measurement(rpy[2], pos_prev, a_0);
 
-    Vector3d innovation;
-    innovation << z[0] - zh[0], z[1] - zh[1], z[2] - zh[2]; // innov = z - H*x
+    Vector4d innovation;
+    innovation << z[0] - zh[0], z[1] - zh[1], z[2] - zh[2], z[3] - zh[3]; // innov = z - H*x
 
-    Matrix3d K;
+    MatrixXd K{12,4};
     K = P_prev * Hk_T * S.inverse();
 
-    xk_ddr = xk_prev + K*innovation;
-    P_ddr = (Matrix3d::Identity() - K*Hk) * P_prev;
+    xk_imu = xk_prev + K*innovation;
+    MatrixXd I{12,12};
+    P_imu = (I.setIdentity() - K*Hk) * P_prev;
 }
 
 void Estimation::imu_ekf(){
