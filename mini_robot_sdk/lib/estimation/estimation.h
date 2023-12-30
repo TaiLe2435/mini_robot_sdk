@@ -62,16 +62,16 @@ class Estimation {
         Vector3d xk_ddr;
         Matrix3d P_ddr_prev;
         Matrix3d P_ddr;
-        Matrix3d Qk_ddr; // need to define this
+        Matrix2d Qk_ddr;
         Vector3d zk_ddr{zk_ddr[0], zk_ddr[1], zk_ddr[2]}; 
         Matrix3d Hk_ddr;
-        Matrix3d R_ddr; // need to define this
+        Matrix3d R_ddr;
 
         // Vector3d unicycle_model(float, float);
         // MatrixNx3Pointer ddr_process(float v, float heading);
         // Vector3d ddr_measurement(float*);
         // MatrixNx3Pointer ddr_measurement_model();
-        void ddr_predict(Matrix3d, Matrix3d, float, float);
+        void ddr_predict(Matrix3d, float, float, float*);
         void ddr_update(Vector3d, Vector3d, Matrix3d);
 
         // Matrix stuff | Using ArduinoEigen now

@@ -240,18 +240,15 @@ void Estimation::imu_predict(VectorXd xk, MatrixXd Fk, MatrixXd P, MatrixXd Gk, 
 }
 
 void Estimation::imu_update(float* rpy){
-    MatrixXd Hk{12,12};
+    MatrixXd Hk{4,12}, Hk_T{12,4};
     Hk = imu_measurement_model(rpy);
-
-    
-    Matrix3d Hk = ddr_measurement_model();
 
     // Innovation Covariance
     // S = Hk*P_*Hk' + R;
 
-    Matrix3d S, Hk_T;
+    Matrix4d S{4,4};
     Hk_T = Hk.transpose();
-    S = Hk*P_prev*Hk_T + R_ddr;
+    S = Hk*P_prev*Hk_T + R;
 
     float pose[6] {}; // need to change this
     Vector3d zh = xk; // and this to Hk*xk
@@ -308,7 +305,7 @@ Matrix3d Estimation::ddr_measurement_model(){ // could just delete and set Hk_dd
     return Hk_ddr;
 }
 
-void Estimation::ddr_predict(Matrix3d Fk, Matrix3d P, float v, float w){
+void Estimation::ddr_predict(Matrix3d P, float v, float w, float* pose){
     
     // States
     Vector3d states = unicycle_model(v, w);
@@ -318,7 +315,8 @@ void Estimation::ddr_predict(Matrix3d Fk, Matrix3d P, float v, float w){
 
     // Covariance
     // P_prev = Fk*P*Fk' + Qk;
-    Matrix3d Fk_T;
+    Matrix3d Fk, Fk_T;
+    Fk = ddr_process(v, pose[5]);
     Fk_T = Fk.transpose(); // Fk'
     P_ddr_prev = Fk*P*Fk_T + Qk_ddr;
 }
@@ -350,9 +348,6 @@ void Estimation::ddr_update(Vector3d xk_prev, Vector3d xk, Matrix3d P_prev){
 }
 
 Vector3d Estimation::ddr_ekf(float v, float w, float* pose){
-    Vector3d f = unicycle_model(v, w);
-
-    Matrix3d Fk = ddr_process(v, pose[5]); // v and heading
 
     float dt = float(calculate_delta_time()) / 10000.0;
     MatrixXd Wk {3, 2};
@@ -362,19 +357,12 @@ Vector3d Estimation::ddr_ekf(float v, float w, float* pose){
           0, dt;
     Wk_T = Wk.transpose();
     
-    Matrix2d Qk;
-    Qk << 0.05, 0,
+    Qk_ddr << 0.05, 0,
          0 , 0.05;
 
-    Matrix3d Q;
-    Q = Wk * Qk * Wk_T;
+    Qk_ddr = Wk * Qk_ddr * Wk_T;
 
-    Vector3d h = ddr_measurement(pose);
-
-    Matrix3d Hk = ddr_measurement_model();
-
-    Matrix3d Rk;
-    Rk << 0.2, 0, 0,
+    R_ddr << 0.2, 0, 0,
           0, 0.2, 0,
           0, 0, (M_PI/16)*(M_PI/16); 
 
@@ -382,7 +370,7 @@ Vector3d Estimation::ddr_ekf(float v, float w, float* pose){
     ddr_update(xk_ddr_prev, xk_ddr, P_ddr_prev);
 
     // gives xk_ddr_prev and P_ddr_prev members
-    ddr_predict(Fk_ddr, P_ddr, v, w);
+    ddr_predict(P_ddr, v, w, pose);
 
     return xk_ddr;
 }
