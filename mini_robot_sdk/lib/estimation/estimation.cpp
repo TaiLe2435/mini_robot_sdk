@@ -134,8 +134,6 @@ MatrixXd Estimation::imu_process_model(float* rpy, float* acc){
         cP*sY, sR*sP*sY+cR*cY, cR*sP*sY-cY*sR,
         -sP, sR*cP, cR*cP;
 
-    Matrix3d neg_C = -C;
-
     Matrix3d S;
     S << 0, -acc[2], acc[1],
          acc[2], 0, -acc[0],
@@ -157,15 +155,7 @@ MatrixXd Estimation::imu_process_model(float* rpy, float* acc){
     return Fk_imu;
 }
 
-Estimation::MatrixNx12Pointer Estimation::imu_process_noise(float* rpy){
-
-float I33[3][3] {
-        {1, 0, 0},
-        {0, 1, 0},
-        {0, 0, 1} 
-    };
-
-    float zero33[3][3] {0};
+MatrixXd Estimation::imu_process_noise(float* rpy){
 
     float cR = cos(rpy[0]);
     float sR = sin(rpy[0]);
@@ -174,44 +164,23 @@ float I33[3][3] {
     float cY = cos(rpy[2]);
     float sY = sin(rpy[2]);
 
-    float C[3][3] {
-        { cP*cY, sP*sR*cY-cR*sY, cR*sP*cY+sR*sY },
-        { cP*sY, sR*sP*sY+cR*cY, cR*sP*sY-cY*sR },
-        { -sP, sR*cP, cR*cP }
-    };
+    Matrix3d C;
 
-    float neg_C[3][3] {
-        { -cP*cY, -sP*sR*cY+cR*sY, -cR*sP*cY-sR*sY },
-        { -cP*sY, -sR*sP*sY-cR*cY, -cR*sP*sY+cY*sR },
-        { sP, -sR*cP, -cR*cP }
-    };
-
+    C << cP*cY, sP*sR*cY-cR*sY, cR*sP*cY+sR*sY,
+         cP*sY, sR*sP*sY+cR*cY, cR*sP*sY-cY*sR,
+         -sP, sR*cP, cR*cP; 
     
     // Gk(:,:,i) = [-C zero33 zero33 zero33;
     //             zero33 C zero33 zero33;
     //             zero33 zero33 I33 zero33;
     //             zero33 zero33 zero33 I33];
 
-    insert_matrix_Nx12_default(Gk_imu, neg_C, 0, 0);
-    insert_matrix_Nx12_default(Gk_imu, zero33, 0, 3);
-    insert_matrix_Nx12_default(Gk_imu, zero33, 0, 6);
-    insert_matrix_Nx12_default(Gk_imu, zero33, 0, 9);
-
-    insert_matrix_Nx12_default(Gk_imu, zero33, 3, 0);
-    insert_matrix_Nx12_default(Gk_imu, C, 3, 3);
-    insert_matrix_Nx12_default(Gk_imu, zero33, 3, 6);
-    insert_matrix_Nx12_default(Gk_imu, zero33, 3, 9);
-
-    insert_matrix_Nx12_default(Gk_imu, zero33, 6, 0);
-    insert_matrix_Nx12_default(Gk_imu, zero33, 6, 3);
-    insert_matrix_Nx12_default(Gk_imu, I33, 6, 6);
-    insert_matrix_Nx12_default(Gk_imu, zero33, 6, 9);
-
-    insert_matrix_Nx12_default(Gk_imu, zero33, 9, 0);
-    insert_matrix_Nx12_default(Gk_imu, zero33, 9, 3);
-    insert_matrix_Nx12_default(Gk_imu, zero33, 9, 6);
-    insert_matrix_Nx12_default(Gk_imu, I33, 9, 9);
-
+    Gk_imu.setZero();
+    Gk_imu.block<3,3>(0,0) = -C;
+    Gk_imu.block<3,3>(3,3) = C;
+    Gk_imu.block<3,3>(6,6) = Matrix3d::Identity();
+    Gk_imu.block<3,3>(9,9) = Matrix3d::Identity();
+    
     return Gk_imu;
 }
 
