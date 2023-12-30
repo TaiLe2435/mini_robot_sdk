@@ -180,7 +180,7 @@ MatrixXd Estimation::imu_process_noise(float* rpy){
     Gk_imu.block<3,3>(3,3) = C;
     Gk_imu.block<3,3>(6,6) = Matrix3d::Identity();
     Gk_imu.block<3,3>(9,9) = Matrix3d::Identity();
-    
+
     return Gk_imu;
 }
 
@@ -213,38 +213,20 @@ float* Estimation::imu_measurement(float ddr_heading, float* pos_prev, float* a_
     return zk_imu;
 }
 
-Estimation::MatrixNx12Pointer Estimation::imu_measurement_model(float* rpy){
-   float I13[1][3] {
-        {1, 0, 0}
-    };
-   
-   float I33[3][3] {
-        {1, 0, 0},
-        {0, 1, 0},
-        {0, 0, 1} 
-    };
-
-    float zero33[3][3] {0};
-    float zero13[1][3] {0};
+MatrixXd Estimation::imu_measurement_model(float* rpy){
 
     float tR = tan(rpy[0]);
     float cY = cos(rpy[2]);
     float sY = sin(rpy[2]);
 
-    float temp[1][3] {tR*cY, tR*sY, -1};
+    Vector3d temp {tR*cY, tR*sY, -1};
     
     // Hjacobian(:,:,i) = [tR*cY tR*sY -1 zero13 zero13 zero13;
     //             zero33  I33   zero33 zero33];
 
-    insert_matrix_Nx12(Hk_imu, temp, 4, 12, 1, 3, 0, 0);
-    insert_matrix_Nx12(Hk_imu, zero13, 4, 12, 1, 3, 0, 3);
-    insert_matrix_Nx12(Hk_imu, zero13, 4, 12, 1, 3, 0, 6);
-    insert_matrix_Nx12(Hk_imu, zero13, 4, 12, 1, 3, 0, 9);
-
-    insert_matrix_Nx12(Hk_imu, zero33, 4, 12, 3, 3, 1, 0);
-    insert_matrix_Nx12(Hk_imu, I33, 4, 12, 3, 3, 1, 3);
-    insert_matrix_Nx12(Hk_imu, zero33, 4, 12, 3, 3, 1, 6);
-    insert_matrix_Nx12(Hk_imu, zero33, 4, 12, 3, 3, 1, 9);
+    Hk_imu.setZero();
+    Hk_imu.block<1,3>(0,0) = temp;
+    Hk_imu.block<3,3>(1,3) = Matrix3d::Identity();
 
     return Hk_imu; 
 }

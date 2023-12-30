@@ -22,7 +22,7 @@ class Estimation {
            
         MatrixXd imu_process_model(float*, float*);
         MatrixXd imu_process_noise(float*);
-        MatrixNx12Pointer imu_measurement_model(float*);
+        MatrixXd imu_measurement_model(float*);
 
         typedef float (*MatrixNx3Pointer)[3];
         MatrixNx3Pointer ddr_process(float, float);
@@ -44,7 +44,7 @@ class Estimation {
         MatrixXd Gk_imu{12, 12};
         float xk_imu[12];
         float zk_imu[4]; 
-        float Hk_imu[4][12];
+        MatrixXd Hk_imu{4, 12};
         // typedef float (*MatrixNx12Pointer)[12];
 
         // MatrixNx12Pointer imu_process_model(float*, float*);

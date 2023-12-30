@@ -31,7 +31,7 @@ void loop() {
   // int desired = getBT();
 
   Eigen::MatrixXd states {12,12};
-  states = imu.imu_process_noise(calib);
+  states = imu.imu_measurement_model(calib);
 
  // Print the elements of the 12x12 matrix
     for (int i = 0; i < states.rows(); ++i) {
