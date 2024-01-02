@@ -111,10 +111,18 @@ float* Estimation::get_acc(){
     return acc;
 }
 
+Vector3d Estimation::get_position(){
+    return position;
+}
+
 // Do I need this? Yes need rpy function that subtracts biases and estimates pose
-// float* Estimation::get_rpy(){
-// //     return 0.0;
-// }
+Vector3d Estimation::get_rpy(){
+    return rpy;
+}
+
+VectorXd Estimation::get_pose(){
+    return pose;
+}
 
 //_____________________________IMU ESTIMATION STUFF__________________________________________//
 
@@ -272,8 +280,10 @@ VectorXd Estimation::imu_ekf(float* rpy, float* pos_prev, float* a, float* a_0){
     Gk = imu_process_noise(rpy);    // predict and update
 
     Q.setZero();
+    MatrixXd I{9,9};
+
     Q.block<3,3>(0,0) = M_PI/16 * Matrix3d::Identity();
-    Q.block<9,9>(3,3) = 0.1 * Matrix3d::Identity();
+    Q.block<9,9>(3,3) = 0.1 * I.setIdentity();
  
     R_imu << (M_PI/16)*(M_PI/16), 0, 0, 0,
                 0, (0.6)*(0.6), 0, 0,
@@ -284,7 +294,7 @@ VectorXd Estimation::imu_ekf(float* rpy, float* pos_prev, float* a, float* a_0){
     imu_update(xk_imu_prev, xk_imu, P_imu_prev, rpy, pos_prev, a_0);
 
     // gives xk_imu_prev and P_imu_prev members
-    imu_predict(xk_imu, Fk, P_imu, Gk);
+    imu_predict(xk_imu, Fk, P_imu, Gk, Q);
 
     return xk_imu;
 }
@@ -325,7 +335,7 @@ Matrix3d Estimation::ddr_measurement_model(){ // could just delete and set Hk_dd
 
     return Hk_ddr;
 }
-
+// error stemming from here
 void Estimation::ddr_predict(Matrix3d P, float v, float w, float* pose){
     
     // States
@@ -335,7 +345,7 @@ void Estimation::ddr_predict(Matrix3d P, float v, float w, float* pose){
     xk_ddr_prev[2] = states[2];
 
     // Covariance
-    // P_prev = Fk*P*Fk' + Qk;
+    // // P_prev = Fk*P*Fk' + Qk;
     Matrix3d Fk, Fk_T;
     Fk = ddr_process(v, pose[5]);
     Fk_T = Fk.transpose(); // Fk'
@@ -354,7 +364,7 @@ void Estimation::ddr_update(Vector3d xk_prev, Vector3d xk, Matrix3d P_prev){
     S = Hk*P_prev*Hk_T + R_ddr;
 
     float pose[6] {}; // need to change this
-    Vector3d zh = xk; // and this to Hk*xk
+    Vector3d zh = xk; // and this to Hk*xk | no bc Hk is I
     Vector3d z = ddr_measurement(pose);
 
     Vector3d innovation;
@@ -378,10 +388,11 @@ Vector3d Estimation::ddr_ekf(float v, float w, float* pose){
           0, dt;
     Wk_T = Wk.transpose();
     
-    Qk_ddr << 0.05, 0,
+    Matrix2d Q;
+    Q << 0.05, 0,
          0 , 0.05;
 
-    Qk_ddr = Wk * Qk_ddr * Wk_T;
+    Qk_ddr = Wk * Q * Wk_T;
 
     R_ddr << 0.2, 0, 0,
           0, 0.2, 0,

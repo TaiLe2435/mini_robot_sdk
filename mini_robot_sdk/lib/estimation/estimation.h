@@ -13,7 +13,9 @@ class Estimation {
         float* calib_gyro();
         float* get_gyro(float*);
         float* get_acc();
-        // float* get_rpy();
+        Vector3d get_rpy();
+        Vector3d get_position();
+        VectorXd get_pose();
         VectorXd imu_ekf(float*, float*, float*, float*);
         Vector3d ddr_ekf(float, float, float*);
 
@@ -27,8 +29,6 @@ class Estimation {
         Vector3d unicycle_model(float, float);
         Vector3d ddr_measurement(float*);
 
-        Matrix3d matrix_test();
-
     private:
         float phi, theta, psi;
         float phi_0, theta_0, psi_0, psi_IC;
@@ -38,6 +38,10 @@ class Estimation {
         float calib[3];
         float gyro[3];
         float acc[3];
+
+        Vector3d rpy;
+        Vector3d position;
+        VectorXd pose{6};
 
         MatrixXd Fk_imu{12, 12};
         MatrixXd Gk_imu{12, 12};
@@ -63,7 +67,7 @@ class Estimation {
         Vector3d xk_ddr;
         Matrix3d P_ddr_prev;
         Matrix3d P_ddr;
-        Matrix2d Qk_ddr;
+        Matrix3d Qk_ddr;
         Vector3d zk_ddr{zk_ddr[0], zk_ddr[1], zk_ddr[2]}; 
         Matrix3d Hk_ddr;
         Matrix3d R_ddr;
