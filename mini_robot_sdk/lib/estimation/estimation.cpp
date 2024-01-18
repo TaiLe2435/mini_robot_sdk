@@ -1,418 +1,504 @@
-#include "estimation.h"
-#include <Arduino.h>
-#include <math.h>
-#include <Wire.h> // I2C lib
-#include <LSM6.h> // Accel and Gyro lib
-#include <LIS3MDL.h> // Magnetometer lib
-#include <ArduinoEigen.h>
-#include <ArduinoEigenDense.h>
+// #include "estimation.h"
+// #include <Arduino.h>
+// #include <math.h>
+// #include <Wire.h> // I2C lib
+// #include <LSM6.h> // Accel and Gyro lib
+// #include <LIS3MDL.h> // Magnetometer lib
+// #include <ArduinoEigen.h>
+// #include <ArduinoEigenDense.h>
 
-using namespace Eigen;
+// using namespace Eigen;
 
-LSM6 gyroAcc; 
-LIS3MDL mag;
+// LSM6 gyroAcc; 
+// LIS3MDL mag;
 
-unsigned long oldTime {0}; // used to calculate time step
+// // unsigned long oldTime {0}; // used to calculate time step
 
-Estimation::Estimation(){
+// Estimation::Estimation(){
     
-}
+// }
 
-//_____________________________IMU DRIVERS__________________________________________//
+// //_____________________________IMU DRIVERS__________________________________________//
 
-float* Estimation::calib_gyro(){
-    Wire.begin();
+// VectorXd Estimation::calibrate_imu(){
+//     Wire.begin();
 
-    if (!gyroAcc.init())
-    {
-        Serial.println("Failed to detect and initialize IMU");
-        while(1); // preserves error message on serial monitor
-    }
-    gyroAcc.enableDefault();
+//     if (!gyroAcc.init())
+//     {
+//         Serial.println("Failed to detect and initialize IMU");
+//         while(1); // preserves error message on serial monitor
+//     }
+//     gyroAcc.enableDefault();
 
-    phi = 0;
-    theta = 0;
-    psi = 0;
+//     phi = 0;
+//     theta = 0;
+//     psi = 0;
 
-    phi_0 = 0;
-    theta_0 = 0;
-    psi_0 = 0;
+//     phi_gyro = 0;
+//     theta_gyro = 0;
+//     psi_gyro = 0;
 
-    psiOffset = 0;
+//     roll0 = 0;
+//     pitch0 = 0;
+//     yaw0 = 0;
 
-    int calib_cnt {1000};
-    //_____________Calib Gyro_________________//
-    for(int i = 0; i < calib_cnt; i++)
-    {
-        gyroAcc.read();
-        calib[1] += gyroAcc.g.y;                              //Add pitch value to gyro_pitch_cal.
-        calib[0]  += gyroAcc.g.x;                               //Add roll value to gyro_roll_cal.
-        calib[2]  += gyroAcc.g.z;                                //Add yaw value to gyro_yaw_cal.
-    }
+//     int calib_cnt {1000};
+//     calib.setZero();
+//     //_____________Calib Gyro_________________//
+//     for(int i = 0; i < calib_cnt; i++)
+//     {
+//         gyroAcc.read();
+//         calib(1) += gyroAcc.g.y;                              //Add pitch value to gyro_pitch_cal.
+//         calib(0) += gyroAcc.g.x;                               //Add roll value to gyro_roll_cal.
+//         calib(2) += gyroAcc.g.z;                                //Add yaw value to gyro_yaw_cal.
 
-    calib[1] /= calib_cnt;
-    calib[0]  /= calib_cnt;
-    calib[2]   /= calib_cnt;
+//         calib(3) += gyroAcc.a.x;
+//         calib(4) += gyroAcc.a.y;
+//         calib(5) += gyroAcc.a.z;
+//     }
 
-    return calib;  
-}
+//     calib(1) /= calib_cnt;
+//     calib(0)  /= calib_cnt;
+//     calib(2)   /= calib_cnt;
 
-float* Estimation::get_gyro(float* gyro_calib){
-    gyroAcc.read();
+//     calib(3) /= calib_cnt;
+//     calib(4)  /= calib_cnt;
+//     calib(5)   /= calib_cnt;
 
-    const float scaleG {4.375};
+//     return calib;  
+// }
 
-    //________Gyro data and conversion_______//
-    gyro[0] = gyroAcc.g.x;
-    gyro[1] = gyroAcc.g.y;
-    gyro[2] = gyroAcc.g.z;
+// Vector3d Estimation::get_gyro(Vector3d gyro_calib){
+//     gyroAcc.read();
 
-    gyro[1] -= gyro_calib[1]; // apply calibration
-    gyro[0] -= gyro_calib[0];
-    gyro[2] -= gyro_calib[2]; 
+//     const float scaleG {4.375};
 
-    gyro[1] *= scaleG / 1000.0 * M_PI/180.0 * -1; // convert to deg/s then rads
-    gyro[0] *= scaleG / 1000.0 * M_PI/180.0;
-    gyro[2] *= scaleG / 1000.0 * M_PI/180.0 * -1; 
+//     //________Gyro data and conversion_______//
+//     gyro(0) = gyroAcc.g.x;
+//     gyro(1) = gyroAcc.g.y;
+//     gyro(2) = gyroAcc.g.z;
 
-    return gyro;
-}
+//     gyro(1) -= gyro_calib(1); // apply calibration
+//     gyro(0) -= gyro_calib(0);
+//     gyro(2) -= gyro_calib(2); 
 
-float* Estimation::get_acc(){
-    gyroAcc.read();
+//     gyro(1) *= scaleG / 1000.0 * M_PI/180.0 * -1; // convert to deg/s then rads
+//     gyro(0) *= scaleG / 1000.0 * M_PI/180.0;
+//     gyro(2) *= scaleG / 1000.0 * M_PI/180.0 * -1; 
 
-    //LP filter variables
-    const float alpha {0.5}; //bigger = not enough filtering, lower = too much filtering
-    const float scaleA {0.061};
-    double filtered_data[6] {0};
-    double data[3] {0};
+//     return gyro;
+// }
 
-    //________________Acc data (cm/s^2)_______________________//
-    acc[0] = gyroAcc.a.x * scaleA / 100.0 * -1;
-    acc[1] = gyroAcc.a.y * scaleA / 100.0;
-    acc[2] = gyroAcc.a.z * scaleA / 100.0 * -1;
+// Vector3d Estimation::get_acc(){
+//     gyroAcc.read();
 
-    data[0] = acc[0];
-    data[1] = acc[1];
-    data[2] = acc[2]; 
+//     //LP filter variables
+//     const float alpha {0.5}; //bigger = not enough filtering, lower = too much filtering
+//     const float scaleA {0.061};
+//     double filtered_data[6] {0};
+//     double data[3] {0};
 
-    filtered_data[3] = alpha * data[0] + (1 - alpha) * filtered_data[0];
-    filtered_data[4] = alpha * data[1] + (1 - alpha) * filtered_data[1];
-    filtered_data[5] = alpha * data[2] + (1 - alpha) * filtered_data[2];
+//     //________________Acc data (cm/s^2)_______________________//
+//     acc(0) = gyroAcc.a.x * scaleA / 100.0 * -1;
+//     acc(1) = gyroAcc.a.y * scaleA / 100.0;
+//     acc(2) = gyroAcc.a.z * scaleA / 100.0 * -1;
 
-    filtered_data[0] = filtered_data[3];
-    filtered_data[1] = filtered_data[4];
-    filtered_data[2] = filtered_data[5];
+//     data[0] = acc(0);
+//     data[1] = acc(1);
+//     data[2] = acc(2); 
 
-    acc[0] = filtered_data[3];
-    acc[1] = filtered_data[4];
-    acc[2] = filtered_data[5];
+//     filtered_data[3] = alpha * data[0] + (1 - alpha) * filtered_data[0];
+//     filtered_data[4] = alpha * data[1] + (1 - alpha) * filtered_data[1];
+//     filtered_data[5] = alpha * data[2] + (1 - alpha) * filtered_data[2];
 
-    return acc;
-}
+//     filtered_data[0] = filtered_data[3];
+//     filtered_data[1] = filtered_data[4];
+//     filtered_data[2] = filtered_data[5];
 
-Vector3d Estimation::get_position(){
-    return position;
-}
+//     acc(0) = filtered_data[3];
+//     acc(1) = filtered_data[4];
+//     acc(2) = filtered_data[5];
 
-// Do I need this? Yes need rpy function that subtracts biases and estimates pose
-Vector3d Estimation::get_rpy(){
-    return rpy;
-}
+//     return acc;
+// }
 
-VectorXd Estimation::get_pose(){
-    return pose;
-}
+// // need rpy function that subtracts biases and estimates pose
+// Vector3d Estimation::get_rpy(VectorXd bias, Vector3d rpy_error){
+//     // Constant variables
+//     const float scaleA {0.061};
+//     const float scaleG {4.375};
 
-//_____________________________IMU ESTIMATION STUFF__________________________________________//
+//     float dt = float(calculate_delta_time()) / 1000.0; // converting ms to s
 
-MatrixXd Estimation::imu_process_model(float* rpy, float* acc){
-    const float betaG {0.2};
-    const float betaA {0.2};
+//     float wx, wy, wz;
+//     //________Gyro data and conversion_______//
+//     wx = gyroAcc.g.x;
+//     wy = gyroAcc.g.y;
+//     wz = gyroAcc.g.z;
 
-    float cR = cos(rpy[0]);
-    float sR = sin(rpy[0]);
-    float cP = cos(rpy[1]);
-    float sP = sin(rpy[1]);
-    float cY = cos(rpy[2]);
-    float sY = sin(rpy[2]);
+//     // wy -= bias(1); // apply calibration
+//     // wx -= bias(0);
+//     // wz -= bias(2); 
 
-    Matrix3d C;
-    C << cP*cY, sP*sR*cY-cR*sY, cR*sP*cY+sR*sY,
-        cP*sY, sR*sP*sY+cR*cY, cR*sP*sY-cY*sR,
-        -sP, sR*cP, cR*cP;
+//     wy *= scaleG / 1000.0 * M_PI/180.0 * -1; // convert to deg/s then rads
+//     wx *= scaleG / 1000.0 * M_PI/180.0;
+//     wz *= scaleG / 1000.0 * M_PI/180.0 * -1; 
 
-    Matrix3d S;
-    S << 0, -acc[2], acc[1],
-         acc[2], 0, -acc[0],
-         -acc[1], acc[0], 0;
+//     float ax, ay, az;
+//     const float alpha {0.5}; // bigger = not enough filtering, lower = too much filtering
+//     double filtered_data[6] {};
+//     double data[3] {};
+//     //________________Acc data (mm/s^2)_______________________//
+//     ax = gyroAcc.a.x * scaleA / 1000.0 * -1;
+//     ay = gyroAcc.a.y * scaleA / 1000.0;
+//     az = gyroAcc.a.z * scaleA / 1000.0 * -1;
+
+//     // ay -= bias(4); // apply calibration
+//     // ax -= bias(3);
+//     // az -= bias(5); 
+
+//     data[0] = ax;
+//     data[1] = ay;
+//     data[2] = az; 
+
+//     filtered_data[3] = alpha * ax + (1 - alpha) * filtered_data[0];
+//     filtered_data[4] = alpha * ay + (1 - alpha) * filtered_data[1];
+//     filtered_data[5] = alpha * az + (1 - alpha) * filtered_data[2];
+
+//     filtered_data[0] = filtered_data[3];
+//     filtered_data[1] = filtered_data[4];
+//     filtered_data[2] = filtered_data[5];
+
+//     ax = filtered_data[3];
+//     ay = filtered_data[4];
+//     az = filtered_data[5];
+
+//     // Gyro angular velocity
+//     double phiDot = (wx + (wz*cos(phi) + wy*sin(phi))*tan(theta));
+//     double thetaDot = (wy*cos(phi) - wz*sin(phi));
+//     double psiDot = ((wz*cos(phi) + wy*sin(phi))/cos(theta));
+
+//     // Gyro numerical integration | change to better numerical integration method (RK4)
+//     phi_gyro = phiDot*dt + phi_gyro;
+//     theta_gyro = thetaDot*dt + theta_gyro;
+//     psi_gyro = psiDot*dt + psi_gyro;
+
+//     // Accel and Mag angles
+//     phi = (atan2(-ay, -az));
+//     theta = (atan2(ax, sqrt(ay*ay + az*az)));
+
+//       // Complementary Filtering 
+//     double roll = (0.02*phi_gyro + 0.98*phi) * (180.0/M_PI);
+//     double pitch = (0.02*theta_gyro + 0.98*theta) * (180.0/M_PI);
+//     double yaw = psi_gyro * (180.0/M_PI);
+
+//     // roll -= rpy_error(0); //x
+//     // pitch -= rpy_error(1); //y
+//     // yaw -= rpy_error(2); //z
+
+//     rpy << dt, pitch, yaw;
+
+//     return rpy;
+// }
+
+// Vector3d Estimation::get_position(Vector3d rpy){
+
+//     return position;
+// }
+
+// VectorXd Estimation::get_pose(){
+//     return pose;
+// }
+
+// //_____________________________IMU ESTIMATION STUFF__________________________________________//
+
+// MatrixXd Estimation::imu_process_model(Vector3d rpy, Vector3d acc){
+//     const float betaG {0.2};
+//     const float betaA {0.2};
+
+//     float cR = cos(rpy(0));
+//     float sR = sin(rpy(0));
+//     float cP = cos(rpy(1));
+//     float sP = sin(rpy(1));
+//     float cY = cos(rpy(2));
+//     float sY = sin(rpy(2));
+
+//     Matrix3d C;
+//     C << cP*cY, sP*sR*cY-cR*sY, cR*sP*cY+sR*sY,
+//         cP*sY, sR*sP*sY+cR*cY, cR*sP*sY-cY*sR,
+//         -sP, sR*cP, cR*cP;
+
+//     Matrix3d S;
+//     S << 0, -acc(2), acc(1),
+//          acc(2), 0, -acc(0),
+//          -acc(1), acc(0), 0;
     
-    // Fk(:,:,i) = [zero33 zero33    -C      zero33;
-    //         S  zero33   zero33      C;
-    //       zero33 zero33 -betaG*I33   zero33;
-    //       zero33 zero33   zero33   -betaA*I33];
+//     // Fk(:,:,i) = [zero33 zero33    -C      zero33;
+//     //         S  zero33   zero33      C;
+//     //       zero33 zero33 -betaG*I33   zero33;
+//     //       zero33 zero33   zero33   -betaA*I33];
 
-    Fk_imu.setZero();
+//     Fk_imu.setZero();
 
-    Fk_imu.block<3,3>(0,6) = -C;
-    Fk_imu.block<3,3>(3,0) = S;
-    Fk_imu.block<3,3>(3,9) = C;
-    Fk_imu.block<3,3>(6,6) = -betaG * Matrix3d::Identity();
-    Fk_imu.block<3,3>(9,9) = -betaA * Matrix3d::Identity();
+//     Fk_imu.block<3,3>(0,6) = -C;
+//     Fk_imu.block<3,3>(3,0) = S;
+//     Fk_imu.block<3,3>(3,9) = C;
+//     Fk_imu.block<3,3>(6,6) = -betaG * Matrix3d::Identity();
+//     Fk_imu.block<3,3>(9,9) = -betaA * Matrix3d::Identity();
 
-    return Fk_imu;
-}
+//     return Fk_imu;
+// }
 
-MatrixXd Estimation::imu_process_noise(float* rpy){
+// MatrixXd Estimation::imu_process_noise(Vector3d rpy){
 
-    float cR = cos(rpy[0]);
-    float sR = sin(rpy[0]);
-    float cP = cos(rpy[1]);
-    float sP = sin(rpy[1]);
-    float cY = cos(rpy[2]);
-    float sY = sin(rpy[2]);
+//     float cR = cos(rpy(0));
+//     float sR = sin(rpy(0));
+//     float cP = cos(rpy(1));
+//     float sP = sin(rpy(1));
+//     float cY = cos(rpy(2));
+//     float sY = sin(rpy(2));
 
-    Matrix3d C;
+//     Matrix3d C;
 
-    C << cP*cY, sP*sR*cY-cR*sY, cR*sP*cY+sR*sY,
-         cP*sY, sR*sP*sY+cR*cY, cR*sP*sY-cY*sR,
-         -sP, sR*cP, cR*cP; 
+//     C << cP*cY, sP*sR*cY-cR*sY, cR*sP*cY+sR*sY,
+//          cP*sY, sR*sP*sY+cR*cY, cR*sP*sY-cY*sR,
+//          -sP, sR*cP, cR*cP; 
     
-    // Gk(:,:,i) = [-C zero33 zero33 zero33;
-    //             zero33 C zero33 zero33;
-    //             zero33 zero33 I33 zero33;
-    //             zero33 zero33 zero33 I33];
+//     // Gk(:,:,i) = [-C zero33 zero33 zero33;
+//     //             zero33 C zero33 zero33;
+//     //             zero33 zero33 I33 zero33;
+//     //             zero33 zero33 zero33 I33];
 
-    Gk_imu.setZero();
-    Gk_imu.block<3,3>(0,0) = -C;
-    Gk_imu.block<3,3>(3,3) = C;
-    Gk_imu.block<3,3>(6,6) = Matrix3d::Identity();
-    Gk_imu.block<3,3>(9,9) = Matrix3d::Identity();
+//     Gk_imu.setZero();
+//     Gk_imu.block<3,3>(0,0) = -C;
+//     Gk_imu.block<3,3>(3,3) = C;
+//     Gk_imu.block<3,3>(6,6) = Matrix3d::Identity();
+//     Gk_imu.block<3,3>(9,9) = Matrix3d::Identity();
 
-    return Gk_imu;
-}
+//     return Gk_imu;
+// }
 
-// not done
-Vector4d Estimation::imu_measurement(float ddr_heading, float* pos_prev, float* a_0){
-    // finding heading error
-    // float* pose = get_rpy();
-    float* pose = get_acc(); // waiting for get_rpy function or pose from other EKF
+// // not done
+// Vector4d Estimation::imu_measurement(float ddr_heading, Vector3d pos_prev, Vector3d a_0, VectorXd bias, Vector3d rpy_error){
+//     // finding heading error
+//     Vector3d pose = get_rpy(bias, rpy_error);
+//     // waiting for pose from other EKF
     
-    float posx_current = pose[0];
-    float posy_current = pose[1];
+//     float posx_current = pose(0);
+//     float posy_current = pose(1);
     
-    float acc_heading = atan2(posx_current - pos_prev[0], posy_current-pos_prev[1]);
-    float heading_error = ddr_heading - acc_heading;
+//     float acc_heading = atan2(posx_current - pos_prev(0), posy_current-pos_prev(1));
+//     float heading_error = ddr_heading - acc_heading;
 
-    // finding velocities
-    float* acc = get_acc();
-    float dt = float(calculate_delta_time()) / 10000.0;
+//     // finding velocities
+//     Vector3d acc = get_acc();
+//     float dt = float(calculate_delta_time()) / 10000.0;
 
-    float vel[3] {};
-    vel[0] = acc[0] * dt + a_0[0];
-    vel[1] = acc[1] * dt + a_0[1];
-    vel[2] = acc[2] * dt + a_0[2];
+//     float vel[3] {};
+//     vel[0] = acc(0) * dt + a_0(0);
+//     vel[1] = acc(1) * dt + a_0(1);
+//     vel[2] = acc(2) * dt + a_0(2);
 
-    zk_imu<< heading_error, vel[0], vel[1], vel[2];
+//     zk_imu<< heading_error, vel[0], vel[1], vel[2];
 
-    return zk_imu;
-}
+//     return zk_imu;
+// }
 
-MatrixXd Estimation::imu_measurement_model(float* rpy){
+// MatrixXd Estimation::imu_measurement_model(Vector3d rpy){
 
-    float tR = tan(rpy[0]);
-    float cY = cos(rpy[2]);
-    float sY = sin(rpy[2]);
+//     float tR = tan(rpy(0));
+//     float cY = cos(rpy(2));
+//     float sY = sin(rpy(2));
 
-    Vector3d temp {tR*cY, tR*sY, -1};
+//     Vector3d temp {tR*cY, tR*sY, -1};
     
-    // Hjacobian(:,:,i) = [tR*cY tR*sY -1 zero13 zero13 zero13;
-    //             zero33  I33   zero33 zero33];
+//     // Hjacobian(:,:,i) = [tR*cY tR*sY -1 zero13 zero13 zero13;
+//     //             zero33  I33   zero33 zero33];
 
-    Hk_imu.setZero();
-    Hk_imu.block<1,3>(0,0) = temp;
-    Hk_imu.block<3,3>(1,3) = Matrix3d::Identity();
+//     Hk_imu.setZero();
+//     Hk_imu.block<1,3>(0,0) = temp;
+//     Hk_imu.block<3,3>(1,3) = Matrix3d::Identity();
 
-    return Hk_imu; 
-}
+//     return Hk_imu; 
+// }
 
-void Estimation::imu_predict(VectorXd xk, MatrixXd Fk, MatrixXd P, MatrixXd Gk, MatrixXd Qk){
-    xk_imu_prev = xk + Fk*(xk - xk_imu_prev);
+// void Estimation::imu_predict(VectorXd xk, MatrixXd Fk, MatrixXd P, MatrixXd Gk, MatrixXd Qk){
+//     xk_imu_prev = xk + Fk*(xk - xk_imu_prev);
 
-    MatrixXd Fk_T{12,12};
-    MatrixXd Gk_T{12,12};
-    Fk_T = Fk.transpose();
-    Gk_T = Gk.transpose();
+//     MatrixXd Fk_T{12,12};
+//     MatrixXd Gk_T{12,12};
+//     Fk_T = Fk.transpose();
+//     Gk_T = Gk.transpose();
 
-    P_imu_prev = Fk*P*Fk_T + Gk*Qk*Gk_T;
-}
+//     P_imu_prev = Fk*P*Fk_T + Gk*Qk*Gk_T;
+// }
 
-void Estimation::imu_update(VectorXd xk_prev, VectorXd xk, MatrixXd P_prev, float* rpy, float* pos_prev, float* a_0){
-    MatrixXd Hk{4,12}, Hk_T{12,4};
-    Hk = imu_measurement_model(rpy);
+// void Estimation::imu_update(VectorXd xk_prev, VectorXd xk, MatrixXd P_prev, Vector3d rpy, Vector3d pos_prev, Vector3d a_0, VectorXd bias, Vector3d rpy_error){
+//     MatrixXd Hk{4,12}, Hk_T{12,4};
+//     Hk = imu_measurement_model(rpy);
 
-    // Innovation Covariance
-    // S = Hk*P_*Hk' + R;
+//     // Innovation Covariance
+//     // S = Hk*P_*Hk' + R;
 
-    Matrix4d S{4,4};
-    Hk_T = Hk.transpose();
-    S = Hk*P_prev*Hk_T + R_imu;
+//     Matrix4d S{4,4};
+//     Hk_T = Hk.transpose();
+//     S = Hk*P_prev*Hk_T + R_imu;
 
-    Vector4d zh;
-    zh = Hk*xk;
-    Vector4d z;
-    z = imu_measurement(rpy[2], pos_prev, a_0);
+//     Vector4d zh;
+//     zh = Hk*xk;
+//     Vector4d z;
+//     z = imu_measurement(rpy[2], pos_prev, a_0, bias, rpy_error);
 
-    Vector4d innovation;
-    innovation << z[0] - zh[0], z[1] - zh[1], z[2] - zh[2], z[3] - zh[3]; // innov = z - H*x
+//     Vector4d innovation;
+//     innovation << z[0] - zh[0], z[1] - zh[1], z[2] - zh[2], z[3] - zh[3]; // innov = z - H*x
 
-    MatrixXd K{12,4};
-    K = P_prev * Hk_T * S.inverse();
+//     MatrixXd K{12,4};
+//     K = P_prev * Hk_T * S.inverse();
 
-    xk_imu = xk_prev + K*innovation;
-    MatrixXd I{12,12};
-    P_imu = (I.setIdentity() - K*Hk) * P_prev;
-}
+//     xk_imu = xk_prev + K*innovation;
+//     MatrixXd I{12,12};
+//     P_imu = (I.setIdentity() - K*Hk) * P_prev;
+// }
 
-VectorXd Estimation::imu_ekf(float* rpy, float* pos_prev, float* a, float* a_0){
-    MatrixXd Fk{12,12}, Gk{12,12}, Q{12,12};
-    Fk = imu_process_model(rpy, a); // maybe make it so they're called in 
-    Gk = imu_process_noise(rpy);    // predict and update
+// VectorXd Estimation::imu_ekf(Vector3d rpy, Vector3d pos_prev, Vector3d a, Vector3d a_0, VectorXd bias, Vector3d rpy_error){
+//     MatrixXd Fk{12,12}, Gk{12,12}, Q{12,12};
+//     Fk = imu_process_model(rpy, a); // maybe make it so they're called in 
+//     Gk = imu_process_noise(rpy);    // predict and update
 
-    Q.setZero();
-    MatrixXd I{9,9};
+//     Q.setZero();
+//     MatrixXd I{9,9};
 
-    Q.block<3,3>(0,0) = M_PI/16 * Matrix3d::Identity();
-    Q.block<9,9>(3,3) = 0.1 * I.setIdentity();
+//     Q.block<3,3>(0,0) = M_PI/16 * Matrix3d::Identity();
+//     Q.block<9,9>(3,3) = 0.1 * I.setIdentity();
  
-    R_imu << (M_PI/16)*(M_PI/16), 0, 0, 0,
-                0, (0.6)*(0.6), 0, 0,
-                0, 0, (0.6)*(0.6), 0,
-                0, 0, 0, (0.6)*(0.6);
+//     R_imu << (M_PI/16)*(M_PI/16), 0, 0, 0,
+//                 0, (0.6)*(0.6), 0, 0,
+//                 0, 0, (0.6)*(0.6), 0,
+//                 0, 0, 0, (0.6)*(0.6);
 
-    // gives xk_imu and P_imu members
-    imu_update(xk_imu_prev, xk_imu, P_imu_prev, rpy, pos_prev, a_0);
+//     // gives xk_imu and P_imu members
+//     imu_update(xk_imu_prev, xk_imu, P_imu_prev, rpy, pos_prev, a_0, bias, rpy_error);
 
-    // gives xk_imu_prev and P_imu_prev members
-    imu_predict(xk_imu, Fk, P_imu, Gk, Q);
+//     // gives xk_imu_prev and P_imu_prev members
+//     imu_predict(xk_imu, Fk, P_imu, Gk, Q);
 
-    return xk_imu;
-}
+//     return xk_imu;
+// }
 
-//_____________________________ROBOT ESTIMATION STUFF__________________________________________//
+// //_____________________________ROBOT ESTIMATION STUFF__________________________________________//
 
-Vector3d Estimation::unicycle_model(float v, float w){
-    float dt = float(calculate_delta_time()) / 10000.0;
+// Vector3d Estimation::unicycle_model(float v, float w){
+//     float dt = float(calculate_delta_time()) / 10000.0;
     
-    f_ddr[0] += v*cos(f_ddr[2])*dt;
-    f_ddr[1] += v*sin(f_ddr[2])*dt;
-    f_ddr[2] += w*dt;
+//     f_ddr[0] += v*cos(f_ddr[2])*dt;
+//     f_ddr[1] += v*sin(f_ddr[2])*dt;
+//     f_ddr[2] += w*dt;
 
-    return f_ddr;
-}
+//     return f_ddr;
+// }
 
-// figure out which v to pass | theoretical v we command
-Matrix3d Estimation::ddr_process(float v, float heading){
-    float dt = float(calculate_delta_time()) / 10000.0;
+// // figure out which v to pass | theoretical v we command
+// Matrix3d Estimation::ddr_process(float v, float heading){
+//     float dt = float(calculate_delta_time()) / 10000.0;
     
-    Fk_ddr << 1, 0, -v*sin(heading)*dt,
-               0, 1, v*cos(heading)*dt,
-               0, 0, 1;
+//     Fk_ddr << 1, 0, -v*sin(heading)*dt,
+//                0, 1, v*cos(heading)*dt,
+//                0, 0, 1;
 
-    return Fk_ddr;
-}
+//     return Fk_ddr;
+// }
 
-Vector3d Estimation::ddr_measurement(float* pose){ // could just call a pose() function inside so no parameters
-    zk_ddr[0] = pose[0]; // x
-    zk_ddr[1] = pose[1]; // y
-    zk_ddr[2] = pose[5]; // theta
+// Vector3d Estimation::ddr_measurement(VectorXd pose){ // could just call a pose() function inside so no parameters
+//     zk_ddr[0] = pose(0); // x
+//     zk_ddr[1] = pose(1); // y
+//     zk_ddr[2] = pose(5); // theta
 
-    return zk_ddr;
-}
+//     return zk_ddr;
+// }
 
-Matrix3d Estimation::ddr_measurement_model(){ // could just delete and set Hk_ddr as a constant that doesnt get accessed 
-    Hk_ddr.setIdentity();
+// Matrix3d Estimation::ddr_measurement_model(){ // could just delete and set Hk_ddr as a constant that doesnt get accessed 
+//     Hk_ddr.setIdentity();
 
-    return Hk_ddr;
-}
-// error stemming from here
-void Estimation::ddr_predict(Matrix3d P, float v, float w, float* pose){
+//     return Hk_ddr;
+// }
+// // error stemming from here
+// void Estimation::ddr_predict(Matrix3d P, float v, float w, VectorXd pose){
     
-    // States
-    Vector3d states = unicycle_model(v, w);
-    xk_ddr_prev[0] = states[0];
-    xk_ddr_prev[1] = states[1];
-    xk_ddr_prev[2] = states[2];
+//     // States
+//     Vector3d states = unicycle_model(v, w);
+//     xk_ddr_prev[0] = states(0);
+//     xk_ddr_prev[1] = states(1);
+//     xk_ddr_prev[2] = states(2);
 
-    // Covariance
-    // // P_prev = Fk*P*Fk' + Qk;
-    Matrix3d Fk, Fk_T;
-    Fk = ddr_process(v, pose[5]);
-    Fk_T = Fk.transpose(); // Fk'
-    P_ddr_prev = Fk*P*Fk_T + Qk_ddr;
-}
+//     // Covariance
+//     // // P_prev = Fk*P*Fk' + Qk;
+//     Matrix3d Fk, Fk_T;
+//     Fk = ddr_process(v, pose(5));
+//     Fk_T = Fk.transpose(); // Fk'
+//     P_ddr_prev = Fk*P*Fk_T + Qk_ddr;
+// }
 
-void Estimation::ddr_update(Vector3d xk_prev, Vector3d xk, Matrix3d P_prev){
+// void Estimation::ddr_update(Vector3d xk_prev, Vector3d xk, Matrix3d P_prev){
 
-    Matrix3d Hk = ddr_measurement_model();
+//     Matrix3d Hk = ddr_measurement_model();
 
-    // Innovation Covariance
-    // S = Hk*P_*Hk' + R;
+//     // Innovation Covariance
+//     // S = Hk*P_*Hk' + R;
 
-    Matrix3d S, Hk_T;
-    Hk_T = Hk.transpose();
-    S = Hk*P_prev*Hk_T + R_ddr;
+//     Matrix3d S, Hk_T;
+//     Hk_T = Hk.transpose();
+//     S = Hk*P_prev*Hk_T + R_ddr;
 
-    float pose[6] {}; // need to change this
-    Vector3d zh = xk; // and this to Hk*xk | no bc Hk is I
-    Vector3d z = ddr_measurement(pose);
+//     VectorXd pose{6}; // need to change this
+//     Vector3d zh = xk; // and this to Hk*xk | no bc Hk is I
+//     Vector3d z = ddr_measurement(pose);
 
-    Vector3d innovation;
-    innovation << z[0] - zh[0], z[1] - zh[1], z[2] - zh[2]; // innov = z - H*x
+//     Vector3d innovation;
+//     innovation << z[0] - zh[0], z[1] - zh[1], z[2] - zh[2]; // innov = z - H*x
 
-    Matrix3d K;
-    K = P_prev * Hk_T * S.inverse();
+//     Matrix3d K;
+//     K = P_prev * Hk_T * S.inverse();
 
-    xk_ddr = xk_prev + K*innovation;
-    P_ddr = (Matrix3d::Identity() - K*Hk) * P_prev;
+//     xk_ddr = xk_prev + K*innovation;
+//     P_ddr = (Matrix3d::Identity() - K*Hk) * P_prev;
 
-}
+// }
 
-Vector3d Estimation::ddr_ekf(float v, float w, float* pose){
+// Vector3d Estimation::ddr_ekf(float v, float w, VectorXd pose){
 
-    float dt = float(calculate_delta_time()) / 10000.0;
-    MatrixXd Wk {3, 2};
-    MatrixXd Wk_T {2, 3};
-    Wk << cos(pose[5]) * dt, 0,
-          sin(pose[3]) * dt, 0,
-          0, dt;
-    Wk_T = Wk.transpose();
+//     float dt = float(calculate_delta_time()) / 10000.0;
+//     MatrixXd Wk {3, 2};
+//     MatrixXd Wk_T {2, 3};
+//     Wk << cos(pose(5)) * dt, 0,
+//           sin(pose(3)) * dt, 0,
+//           0, dt;
+//     Wk_T = Wk.transpose();
     
-    Matrix2d Q;
-    Q << 0.05, 0,
-         0 , 0.05;
+//     Matrix2d Q;
+//     Q << 0.05, 0,
+//          0 , 0.05;
 
-    Qk_ddr = Wk * Q * Wk_T;
+//     Qk_ddr = Wk * Q * Wk_T;
 
-    R_ddr << 0.2, 0, 0,
-          0, 0.2, 0,
-          0, 0, (M_PI/16)*(M_PI/16); 
+//     R_ddr << 0.2, 0, 0,
+//           0, 0.2, 0,
+//           0, 0, (M_PI/16)*(M_PI/16); 
 
-    // gives xk_ddr and P_ddr members
-    ddr_update(xk_ddr_prev, xk_ddr, P_ddr_prev);
+//     // gives xk_ddr and P_ddr members
+//     ddr_update(xk_ddr_prev, xk_ddr, P_ddr_prev);
 
-    // gives xk_ddr_prev and P_ddr_prev members
-    ddr_predict(P_ddr, v, w, pose);
+//     // gives xk_ddr_prev and P_ddr_prev members
+//     ddr_predict(P_ddr, v, w, pose);
 
-    return xk_ddr;
-}
+//     return xk_ddr;
+// }
 
-//_____________________________EXTRA STUFF__________________________________________//
+// //_____________________________EXTRA STUFF__________________________________________//
 
-unsigned long Estimation::calculate_delta_time()
-{
-  unsigned long currentTime = millis();
-  unsigned long deltaTime = (currentTime - oldTime);
-  oldTime = currentTime;
-  return deltaTime;
-}
+// unsigned long Estimation::calculate_delta_time()
+// {
+//   unsigned long currentTime = millis();
+//   unsigned long deltaTime = (currentTime - oldTime);
+//   oldTime = currentTime;
+//   return deltaTime;
+// }

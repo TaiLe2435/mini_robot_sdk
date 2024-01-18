@@ -9,10 +9,10 @@ LSM6 gyroAcc; // creating accelerometer/gyro object
 LIS3MDL mag;
 
 // Constant variables
-const float scaleA {0.061};
-const float scaleG {4.375};
-const float scaleM {6842.0};
-const float delta {0.2};
+const float scaleA = 0.061;
+const float scaleG = 4.375;
+const float scaleM = 6842.0;
+const float delta = 0.2;
 
 // Sensor variables
 float dt;
@@ -23,64 +23,53 @@ float mx, my, mz;
 float magGlobalX, magGlobalY, magGlobalZ;
 float magOffset[3], magGain[3];
 
-// Magnetometer calibration constants
-const float magOffsetX {-3764.0}; //mxMin
-const float magOffsetY {2220.0};   //myMin
-const float magOffsetZ {-4925.0};  //mzMin
-
-const float magGainX = 4466.0 - -3764.0; //mxMax - mxMin
-const float magGainY = 10532 - 2220.0;    //myMax - myMin
-const float magGainZ = 3402.0 - -4925.0;  //mzMax - mzMin
-
-
 // Angle Variables
 int a, b, drift;
 int roll, pitch, yaw;
 int roll0, pitch0, yaw0;
 float phiDot, thetaDot, psiDot;
 float phi, theta, psi;
-float phi_0, theta_0, psi_0, psi_IC;
+float phi_0, theta_0, psi_0;
 float psiOffset;
 
 // Matrices and Position Variables
 float cPhi, sPhi, cTh, sTh, cPsi, sPsi;
-float R[3][3] {{ 0 }};
-float T[3][3] {{ 0 }};
-float W[3][3] {{ 0 }};
-int A[3][1] {{ 0 }};
-float aT[3][1] {{ 0 }};
-float aG[3][1] {{ 0 }};
-float aCentrp[3][1] {{ 0 }};
-int a0[3][1] {{ 0 }};
-int v0[3][1] {{ 0 }};
-int x0[3][1] {{ 0 }};
-int s[3][1] {{ 0 }};
-int zero[3][1] {{ 0 }};
+float R[3][3] {{}};
+float T[3][3] {{}};
+float W[3][3] {{}};
+int A[3][1] {{}};
+float aT[3][1] {{}};
+float aG[3][1] {{}};
+float aCentrp[3][1] {{}};
+int a0[3][1] {{}};
+int v0[3][1] {{}};
+int x0[3][1] {{}};
+int s[3][1] {{}};
+int zero[3][1] {{}};
 
 int pop[30];
-int avg {0};
+int avg = 0;
 
 // delta variables
-int counter {0};
-unsigned long oldTime {0};
+int counter = 0;
+unsigned long oldTime = 0;
 
 //________Gyro Offset Variables___________//
-float gyro_pitch_cal {0};
-float gyro_roll_cal {0};
-float gyro_yaw_cal {0};
-float gyro_pitch {0};
-float gyro_roll {0};
-float gyro_yaw {0};
-int calib_cnt {1000};
-float calib[3];
+float gyro_pitch_cal = 0;
+float gyro_roll_cal = 0;
+float gyro_yaw_cal = 0;
+float gyro_pitch = 0;
+float gyro_roll = 0;
+float gyro_yaw = 0;
+int calib_cnt = 100;
 
 //LP filter variables
-const float alpha {0.5}; //bigger = not enough filtering, lower = too much filtering
-double filtered_data[6] {0};
-double data[3] {0};
+const float alpha = 0.5; //bigger = not enough filtering, lower = too much filtering
+double filtered_data[6] = {0, 0, 0, 0, 0, 0};
+double data[3] = {0, 0, 0};
 
-float* initIMU();
-float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_cal);
+void initIMU();
+float* poseEstimation();
 void transform(float accX, float accY, float accZ, float matrix[3][3], String acc);
 void transpose(float matrix[3][3]);
 void euler(int sDdot[3][1], int sdot[3][1], int s0[3][1]);
@@ -89,7 +78,9 @@ void trapezoidal(int s1[3][1], int s0[3][1], int ic[3][1]);
 void popAvg(int newData);
 unsigned long CalculateDeltaTime();
 
-float* initIMU() 
+float angles[3];
+
+void initIMU() 
 {
   Wire.begin();
   
@@ -112,6 +103,14 @@ float* initIMU()
 
   psiOffset = 0;
 
+//_____________Calib Mag_________________//
+  magOffset[0] = -15845; //mxMin
+  magOffset[1] = 4232;   //myMin
+  magOffset[2] = -4223;  //mzMin
+
+  magGain[0] = (-6822 - -15845);  //mxMax - mxMin
+  magGain[1] = (5568 - 4232);     //myMax - myMin
+  magGain[2] = (13157 - -4223);   //mzMax - mzMin
 
 //_____________Calib Gyro_________________//
   for(int i = 0; i < calib_cnt; i++)
@@ -120,25 +119,26 @@ float* initIMU()
     gyro_pitch_cal += gyroAcc.g.y;                              //Add pitch value to gyro_pitch_cal.
     gyro_roll_cal  += gyroAcc.g.x;                               //Add roll value to gyro_roll_cal.
     gyro_yaw_cal   += gyroAcc.g.z;                                //Add yaw value to gyro_yaw_cal.
+    delay(100);
   }
 
   gyro_pitch_cal /= calib_cnt;
   gyro_roll_cal  /= calib_cnt;
   gyro_yaw_cal   /= calib_cnt;
 
-  calib[0] = gyro_roll_cal;
-  calib[1] = gyro_pitch_cal;
-  calib[2] = gyro_yaw_cal;
+  // calib[0] = gyro_roll_cal;
+  // calib[1] = gyro_pitch_cal;
+  // calib[2] = gyro_yaw_cal;
 
-  return calib;  
+  // return calib;  
 }
 
-float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_cal) 
+float* poseEstimation() 
 {
-  
+  gyroAcc.read();
   mag.read();
 
-  dt = float(CalculateDeltaTime()) / 10000.0;
+  dt = float(CalculateDeltaTime()) / 1000.0;
 
 //________Gyro data and conversion_______//
   wx = gyroAcc.g.x;
@@ -149,14 +149,14 @@ float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_c
   wx -= gyro_roll_cal;
   wz -= gyro_yaw_cal; 
 
-  wy *= scaleG / 1000.0 * M_PI/180.0 * -1; // convert to deg/s then rads
+  wy *= scaleG / 1000.0 * M_PI/180.0; // convert to deg/s then rads
   wx *= scaleG / 1000.0 * M_PI/180.0;
-  wz *= scaleG / 1000.0 * M_PI/180.0 * -1; 
+  wz *= scaleG / 1000.0 * M_PI/180.0; 
   
 //________________Acc data (cm/s^2)_______________________//
-  ax = gyroAcc.a.x * scaleA / 100.0 * -1;
+  ax = gyroAcc.a.x * scaleA / 100.0;
   ay = gyroAcc.a.y * scaleA / 100.0;
-  az = gyroAcc.a.z * scaleA / 100.0 * -1;
+  az = gyroAcc.a.z * scaleA / 100.0;
 
   data[0] = ax;
   data[1] = ay;
@@ -176,22 +176,9 @@ float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_c
   
 //________________Mag data (uT)__________________________//
 
-  mx = ((mag.m.x  - magOffsetX) / magGainX) / scaleM;
-  my = ((mag.m.y  - magOffsetY) / magGainY) / scaleM;
-  mz = ((mag.m.z  - magOffsetZ) / magGainZ) / scaleM;
-
-  if(counter < 1) // Setting ICs
-  {
-    roll0 = roll;
-    pitch0 = pitch;
-    yaw0  = yaw;
-    counter = 1000;
-    ax0 = ax * -1;
-    ay0 = ay * -1;
-    az0 = az * -1; // redefine these for position
-    psi_IC = ((atan2(mx*cos(theta) + my*sin(theta)*sin(phi) + mz*sin(theta)*cos(phi), my*cos(phi) - mz*sin(phi))));
-    psi_0 = 0;
-  }
+  mx = ((mag.m.x  - magOffset[0]) / magGain[0]) / scaleM * -1;
+  my = ((mag.m.y  - magOffset[1]) / magGain[1]) / scaleM * -1;
+  mz = ((mag.m.z  - magOffset[2]) / magGain[2]) / scaleM * -1;
 
   // Gyro angular velocity
   phiDot = (wx + (wz*cos(phi) + wy*sin(phi))*tan(theta));
@@ -206,16 +193,32 @@ float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_c
   // Accel and Mag angles
   phi = (atan2(-ay, -az));                                              // converting to degs
   theta = (atan2(ax, sqrt(ay*ay + az*az)));
-  psi = ((atan2(mx*cos(theta) + my*sin(theta)*sin(phi) + mz*sin(theta)*cos(phi), my*cos(phi) - mz*sin(phi)))) - psi_IC;
+  psi = ((atan2(mx*cos(theta) + my*sin(theta)*sin(phi) + mz*sin(theta)*cos(phi), my*cos(phi) - mz*sin(phi))));
 
   // Complementary Filtering 
   roll = (0.02*phi_0 + 0.98*phi) * 180.0/M_PI;
   pitch = (0.02*theta_0 + 0.98*theta) * 180.0/M_PI;
-  yaw = (0.80*psi_0 + 0.20*psi) * 180.0/M_PI;
+  yaw = (0.98*psi_0 + 0.02*psi) * 180.0/M_PI;
+
+  if(counter < 1) // Setting ICs
+  {
+    roll0 = roll;
+    pitch0 = pitch;
+    yaw0  = yaw;
+    counter = 1000;
+    ax0 = ax * -1;
+    ay0 = ay * -1;
+    az0 = az * -1; // redefine these for position
+    psi_0 = psi;
+  }
 
   roll = roll - roll0; //x
   pitch = pitch - pitch0; //y
   yaw = yaw - yaw0; //z
+
+  angles[0] = roll;
+  angles[1] = pitch;
+  angles[2] = yaw;
 
 //_____________POSITION_CALCULATIONS___________________//
 
@@ -335,7 +338,7 @@ float poseEstimation(float gyro_roll_cal, float gyro_pitch_cal, float gyro_yaw_c
   // Serial.println(yaw);
 
   // delay(100);
-  return yaw; // check delta, check if changing psi_0 to int changes drift
+  return angles; // check delta, check if changing psi_0 to int changes drift
 }
 
 //__________________Functions_____________________________//
