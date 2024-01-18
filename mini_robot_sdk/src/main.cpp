@@ -8,9 +8,6 @@
 #include "bluetooth.h"
 #include "estimation.h"
 
-// Estimation imu;
-// VectorXd calibration{6};
-
 float* imu_calibration;
 float* heading;
 
@@ -19,31 +16,6 @@ void setup() {
 
   Serial.begin(115200);
   Serial.println("setting up :)");
-
-  // calibration = imu.calibrate_imu();
-  // for(int m=0; m<calibration.rows(); m++){
-  //   Serial.println(calibration(m));
-  // }
-  // Serial.println("");
-  // delay(1000);
-
-  // Vector3d gyro_calib;
-  // gyro_calib << calibration(0), calibration(1), calibration(2);
-  // Vector3d gyro;
-  // gyro = imu.get_gyro(gyro_calib);
-  // for(int m=0; m<gyro.rows(); m++){
-  //   Serial.println(gyro(m));
-  // }
-  // Serial.println("");
-  // delay(1000);
-
-  // Vector3d acc;
-  // acc = imu.get_acc();
-  // for(int n=0; n<acc.rows(); n++){
-  //   Serial.println(acc(n));
-  // }
-  // Serial.println("");
-  // delay(1000);
 
   initIMU();
 
@@ -55,7 +27,7 @@ void setup() {
 void loop() {
   stop();
 
-  heading = poseEstimation();
+  heading = pose();
   Serial.print("Angles: ");
   Serial.print(heading[0]);
   Serial.print(" ");

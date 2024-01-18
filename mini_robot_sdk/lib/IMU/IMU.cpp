@@ -69,7 +69,9 @@ double filtered_data[6] = {0, 0, 0, 0, 0, 0};
 double data[3] = {0, 0, 0};
 
 void initIMU();
-float* poseEstimation();
+float* pose();
+void get_rpy();
+void get_position();
 void transform(float accX, float accY, float accZ, float matrix[3][3], String acc);
 void transpose(float matrix[3][3]);
 void euler(int sDdot[3][1], int sdot[3][1], int s0[3][1]);
@@ -133,7 +135,14 @@ void initIMU()
   // return calib;  
 }
 
-float* poseEstimation() 
+float* pose() 
+{
+  get_rpy();
+
+  return angles; // check delta, check if changing psi_0 to int changes drift
+}
+
+void get_rpy()
 {
   gyroAcc.read();
   mag.read();
@@ -219,8 +228,11 @@ float* poseEstimation()
   angles[0] = roll;
   angles[1] = pitch;
   angles[2] = yaw;
+}
 
-//_____________POSITION_CALCULATIONS___________________//
+void get_position()
+{
+  //_____________POSITION_CALCULATIONS___________________//
 
   // cPhi = cos(roll * M_PI/180);
   // sPhi = sin(roll * M_PI/180);
@@ -338,7 +350,6 @@ float* poseEstimation()
   // Serial.println(yaw);
 
   // delay(100);
-  return angles; // check delta, check if changing psi_0 to int changes drift
 }
 
 //__________________Functions_____________________________//
