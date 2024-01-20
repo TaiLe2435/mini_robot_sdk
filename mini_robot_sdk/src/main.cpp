@@ -11,6 +11,8 @@
 float* imu_calibration;
 float* heading;
 
+using namespace Eigen;
+
 void setup() {
   stop();
 
@@ -27,48 +29,21 @@ void setup() {
 void loop() {
   stop();
 
-  heading = pose();
-  Serial.print("Angles: ");
-  Serial.print(heading[0]);
-  Serial.print(" ");
-  Serial.print(heading[1]);
-  Serial.print(" ");
-  Serial.println(heading[2]);
+  VectorXd estimation{6};
+
+  estimation = get_pose();
+
+  Serial.println("Pose:");
+//  Print the components of an eigen struct
+    for (int i = 0; i < estimation.rows(); ++i) {
+        for (int j = 0; j < estimation.cols(); ++j) {
+            Serial.print(estimation(i,j));
+            Serial.print(" ");
+        }
+        Serial.println("");
+    }
 
   // int desired = getBT();
-
-//   Eigen::MatrixXd states {12,12};
-//   states = imu.imu_measurement_model(calib);
-
-//  // Print the elements of the 12x12 matrix
-//     for (int i = 0; i < states.rows(); ++i) {
-//         for (int j = 0; j < states.cols(); ++j) {
-//             Serial.print(states(i,j));
-//             Serial.print(" ");
-//         }
-//         Serial.println("");
-//     }
-
-  // Eigen::Matrix3d states = imu.ddr_measurement_model();
-//   Eigen::Vector3d rpy_error;
-//   rpy_error << 0, 0, 0;
-//   Eigen::Vector3d states = imu.get_rpy(calibration, rpy_error);
-
-//  // Print the elements of the 3x3 matrix
-//     for (int i = 0; i < states.rows(); ++i) {
-//         for (int j = 0; j < states.cols(); ++j) {
-//             Serial.print(states(i, j));
-//             Serial.print(" ");
-//         }
-//         Serial.println("");
-//     }
-
-  // Serial.println("Gyro data:");
-  // Serial.println(states[0]);
-  // Serial.println(states[1]);
-  // Serial.println(states[2]);
-  delay(100);
-
   // float kP {0.5};
   // if(desired != 9999)
   // {
@@ -87,6 +62,8 @@ void loop() {
   //   Serial.println("Error in bluetooth data: unknown value received");
   //   while(1);
   // }
+
+  delay(100);
 
   return;
 }

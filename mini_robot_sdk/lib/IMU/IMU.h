@@ -1,21 +1,24 @@
 #include <Arduino.h>
+#include <ArduinoEigen.h>
+#include <ArduinoEigenDense.h>
 
-void transform(float accX, float accY, float accZ, float matrix[3][3], String acc );
-
-void transpose(float matrix[3][3]);
-
-void euler(int sDdot[3][1], int sdot[3][1], int s0[3][1]);
-
-void simpsons();
-
-void trapezoidal(int s1[3][1], int s0[3][1], int ic[3][1]);
-
-unsigned long CalculateDeltaTime();
+using namespace Eigen;
 
 void initIMU();
 
-float* pose(); 
+void NMNI();
 
-void get_rpy();
+void NDZTA();
 
-void get_position();
+Vector3d get_rpy();
+
+Vector3d get_position(Vector3d);
+
+VectorXd get_pose(); 
+
+Vector3d trapezoidal(Vector3d, Vector3d, Vector3d);
+
+void popAvg(int);
+
+unsigned long CalculateDeltaTime();
+

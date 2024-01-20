@@ -4,6 +4,10 @@
 #include <Wire.h> // I2C lib
 #include <LSM6.h> // Accel and Gyro lib
 #include <LIS3MDL.h> // Magnetometer lib
+#include <ArduinoEigen.h>
+#include <ArduinoEigenDense.h>
+
+using namespace Eigen;
 
 LSM6 gyroAcc; // creating accelerometer/gyro object
 LIS3MDL mag;
@@ -33,19 +37,9 @@ float phi_0, theta_0, psi_0;
 float psiOffset;
 
 // Matrices and Position Variables
-float cPhi, sPhi, cTh, sTh, cPsi, sPsi;
-float R[3][3] {{}};
-float T[3][3] {{}};
-float W[3][3] {{}};
-int A[3][1] {{}};
-float aT[3][1] {{}};
-float aG[3][1] {{}};
-float aCentrp[3][1] {{}};
-int a0[3][1] {{}};
-int v0[3][1] {{}};
-int x0[3][1] {{}};
-int s[3][1] {{}};
-int zero[3][1] {{}};
+Vector3d a0;
+Vector3d v0;
+Vector3d x0;
 
 int pop[30];
 int avg = 0;
@@ -67,20 +61,6 @@ int calib_cnt = 100;
 const float alpha = 0.5; //bigger = not enough filtering, lower = too much filtering
 double filtered_data[6] = {0, 0, 0, 0, 0, 0};
 double data[3] = {0, 0, 0};
-
-void initIMU();
-float* pose();
-void get_rpy();
-void get_position();
-void transform(float accX, float accY, float accZ, float matrix[3][3], String acc);
-void transpose(float matrix[3][3]);
-void euler(int sDdot[3][1], int sdot[3][1], int s0[3][1]);
-void simpsons();
-void trapezoidal(int s1[3][1], int s0[3][1], int ic[3][1]);
-void popAvg(int newData);
-unsigned long CalculateDeltaTime();
-
-float angles[3];
 
 void initIMU() 
 {
@@ -135,14 +115,21 @@ void initIMU()
   // return calib;  
 }
 
-float* pose() 
+void NMNI()
 {
-  get_rpy();
-
-  return angles; // check delta, check if changing psi_0 to int changes drift
+  // write logic for detecting stationary points
+  // pull out threshold values of readings
+  // then use those to filter out data
+  return;
 }
 
-void get_rpy()
+void NDZTA()
+{
+  // same as above
+  return;
+}
+
+Vector3d get_rpy()
 {
   gyroAcc.read();
   mag.read();
@@ -225,201 +212,96 @@ void get_rpy()
   pitch = pitch - pitch0; //y
   yaw = yaw - yaw0; //z
 
-  angles[0] = roll;
-  angles[1] = pitch;
-  angles[2] = yaw;
+  Vector3d angles;
+  angles << roll, pitch, yaw;
+  // angles << dt, dt, dt;
+
+  return angles;
 }
 
-void get_position()
+Vector3d get_position(Vector3d angles)
 {
   //_____________POSITION_CALCULATIONS___________________//
-
-  // cPhi = cos(roll * M_PI/180);
-  // sPhi = sin(roll * M_PI/180);
-  // cTh = cos(pitch * M_PI/180);
-  // sTh = sin(pitch * M_PI/180);
-  // cPsi = cos(yaw * M_PI/180);
-  // sPsi = sin(yaw * M_PI/180);
+  float cPhi = cos(angles(0) * M_PI/180);
+  float sPhi = sin(angles(0) * M_PI/180);
+  float cTh = cos(angles(1) * M_PI/180);
+  float sTh = sin(angles(1) * M_PI/180);
+  float cPsi = cos(angles(2) * M_PI/180);
+  float sPsi = sin(angles(2) * M_PI/180);
   
-  // R[0][0] = cTh*cPsi;
-  // R[0][1] = sPhi*sTh*cPsi - cPhi*sPsi;
-  // R[0][2] = cPhi*sTh*cPsi + sPhi*sPsi;
-  // R[1][0] = cTh*sPsi;
-  // R[1][1] = sPhi*sTh*sPsi + cPhi*cPsi;
-  // R[1][2] = cPhi*sTh*sPsi - sPhi*cPsi;
-  // R[2][0] = -sTh;
-  // R[2][1] = sPhi*cTh;
-  // R[2][2] = cPhi*cTh;
+  Matrix3d R;
+  R << cTh*cPsi, sPhi*sTh*cPsi - cPhi*sPsi, cPhi*sTh*cPsi + sPhi*sPsi,
+       cTh*sPsi, sPhi*sTh*sPsi + cPhi*cPsi, cPhi*sTh*sPsi - sPhi*cPsi,
+           -sTh,                  sPhi*cTh,                  cPhi*cTh;
+  Matrix3d R_T = R.transpose();
 
-  // //Matrix operations
-  // W[0][0] = 0;
-  // W[0][1] = -1* wz * 180/M_PI;
-  // W[0][2] = wy * 180/M_PI;
-  // W[1][0] = wz * 180/M_PI;
-  // W[1][1] = 0;
-  // W[1][2] = -1 * wx * 180/M_PI;
-  // W[2][0] = -1 * wy * 180/M_PI;
-  // W[2][1] = wx * 180/M_PI;
-  // W[2][2] = 0;
+
+  Matrix3d W;
+  W << 0 , -1* wz * 180/M_PI, wy * 180/M_PI,
+       wz * 180/M_PI, 0, -1 * wx * 180/M_PI,
+       -1 * wy * 180/M_PI, wx * 180/M_PI, 0;
   
-  // transpose(R);
-  // transform(ax+ax0, ay+ay0, az+az0, R, "linear");
-  // transform(0, 0, az0, T, "gravity");
-  // transform(v0[0][0], v0[1][0], v0[2][0], W, "centripetal");
+  Vector3d acc;
+  // calculating linear acceleration
+  Vector3d acc_linear;
+  acc << ax+ax0, ay+ay0, az+az0;
+  acc_linear = R * acc;
 
-  // if(abs(aT[0][0]) < 0.2)
-  // {
-  //   aT[0][0] = 0.0;
-  // }
-  // if(abs(aT[1][0]) < 0.2)
-  // {
-  //   aT[1][0] = 0.0;
-  // }
-  // if(abs(aT[2][0]) < 0.6)
-  // {
-  //   aT[2][0] = 0.0;
-  // }
+  // calculating gravitational acceleration
+  Vector3d acc_grav;
+  acc << 0, 0, az0;
+  acc_grav = R_T * acc;
 
-  // A[0][0] = aT[0][0] * 100; // + aG[0][0]*1000; // + aCentrp[0][0]/10;
-  // A[1][0] = aT[1][0] * 100; // + aG[1][0]*1000; // + aCentrp[1][0]/10;
-  // A[2][0] = aT[2][0] * 100; // + aG[2][0]*1000; // + aCentrp[2][0]/10;
+  // calculating centripetal acceleration
+  Vector3d acc_centrp;
+  acc << v0(0), v0(1), v0(2);
+  acc_centrp = W * acc;
 
-//  Serial.print("Linear Acc: ");
-//  Serial.print(aT[0][0]);
-//  Serial.print(" ");
-//  Serial.print(aT[1][0]);
-//  Serial.print(" ");
-//  Serial.println(aT[2][0]);
+  Vector3d a = acc_linear; // + acc_grav + acc_centrp;
   
-  //Integration from acc to vel
-//   trapezoidal(A, a0, v0);
-//   a0[0][0] = A[0][0];
-//   a0[1][0] = A[1][0];
-//   a0[2][0] = A[2][0];
-// //  euler(zero, A, v0);
-//   if(v0[0][0] == s[0][0])
-//   {
-//     v0[0][0] = 0;
-//     s[0][0] = 0;
-//   }
-//     if(v0[1][0] == s[1][0])
-//   {
-//     v0[1][0] = 0;
-//     s[1][0] = 0;
-//   }
-//     if(v0[2][0] == s[2][0])
-//   {
-//     v0[2][0] = 0;
-//     s[2][0] = 0;
-//   }
-  
-//   v0[0][0] = s[0][0];
-//   v0[1][0] = s[1][0];
-//   v0[2][0] = s[2][0];
+  // Integration from acc to vel
+  Vector3d v = a*dt + v0;
 
-//  Serial.print("Velocity: ");
-//  Serial.print(s[0][0]);
-//  Serial.print(" ");
-//  Serial.print(s[1][0]);
-//  Serial.print(" ");
-//  Serial.println(s[2][0]);
-  
-  //Integration from vel to pos
-  // trapezoidal(s, v0, x0);
-//  euler(A, s, x0);
-  // x0[0][0] = s[0][0];
-  // x0[1][0] = s[1][0];
-  // x0[2][0] = s[2][0];
+  // Integration from vel to pos
+  Vector3d s = 0.5 * a * dt*dt + v*dt + x0;
+
+  // setting ICs
+  a0 = a;
+  v0 = v;
+  x0 = s;
 
   // popAvg(s[1][0]);
-
-//_________________________Print Statements___________________________//
-
-//  Serial.print("Position: ");
-// //  Serial.print(s[0][0]);
-// //  Serial.print(" ");
-//  Serial.println(avg);
-// //  Serial.print(" ");
-// //  Serial.println(s[2][0]);
-
-  // Serial.print("Angles: ");
-  // Serial.print(roll);
-  // Serial.print(" ");
-  // Serial.print(pitch);
-  // Serial.print(" ");
-  // Serial.println(yaw);
-
-  // delay(100);
+  return s; 
 }
 
-//__________________Functions_____________________________//
-void transform(float accX, float accY, float accZ, float matrix[3][3], String acc )
+VectorXd get_pose() 
 {
-  if(acc == "linear"){
-  aT[0][0] = matrix[0][0]*accX + matrix[0][1]*accY + matrix[0][2]*accZ;
-  aT[1][0] = matrix[1][0]*accX + matrix[1][1]*accY + matrix[1][2]*accZ;
-  aT[2][0] = matrix[2][0]*accX + matrix[2][1]*accY + matrix[2][2]*accZ;
-  }
+  Vector3d rpy;
+  rpy = get_rpy();
 
-  if(acc == "gravity"){
-  aG[0][0] = matrix[0][0]*accX + matrix[0][1]*accY + matrix[0][2]*accZ;
-  aG[1][0] = matrix[1][0]*accX + matrix[1][1]*accY + matrix[1][2]*accZ;
-  aG[2][0] = matrix[2][0]*accX + matrix[2][1]*accY + matrix[2][2]*accZ;
-  }
+  Vector3d position;
+  position = get_position(rpy);
 
-  if(acc == "centripetal"){
-  aCentrp[0][0] = matrix[0][0]*accX + matrix[0][1]*accY + matrix[0][2]*accZ;
-  aCentrp[1][0] = matrix[1][0]*accX + matrix[1][1]*accY + matrix[1][2]*accZ;
-  aCentrp[2][0] = matrix[2][0]*accX + matrix[2][1]*accY + matrix[2][2]*accZ;
-  }
-  
-  return;
+  VectorXd pose{6};
+  pose << rpy(0), rpy(1), rpy(2), position(0), position(1), position(2);
+  // pose << 49, 49, 49, position(0), position(1), position(2);
+
+  return pose;
 }
 
-void transpose(float matrix[3][3])
+
+//__________________Math Functions_____________________________//
+
+Vector3d trapezoidal(Vector3d s1, Vector3d s0, Vector3d ic)
 {
+  Vector3d s;
+  float dt = float(CalculateDeltaTime()) / 1000.0;  
 
-  T[0][0] = matrix[0][0];
-  T[0][1] = matrix[1][0];
-  T[0][2] = matrix[2][0];
-  T[1][0] = matrix[0][1];
-  T[1][1] = matrix[1][1];
-  T[1][2] = matrix[2][1];
-  T[2][0] = matrix[0][2];
-  T[2][1] = matrix[1][2];
-  T[2][2] = matrix[2][2];
+    s << (s1(0) + s0(0)) * dt * 0.5 + ic(0),
+         (s1(1) + s0(1)) * dt * 0.5 + ic(1),
+         (s1(2) + s0(2)) * dt * 0.5 + ic(2);
   
-  return;
-}
-
-void euler(int sDdot[3][1], int sdot[3][1], int s0[3][1])
-{
-  
-  s[0][0] = 0.5 * sDdot[0][0] * dt*dt + sdot[0][0]*dt + s0[0][0];
-  s[1][0] = 0.5 * sDdot[1][0] * dt*dt + sdot[1][0]*dt + s0[1][0];
-  s[2][0] = 0.5 * sDdot[2][0] * dt*dt + sdot[2][0]*dt + s0[2][0];
-
-//  s[0][0] = sdot[0][0]*dt + s0[0][0];
-//  s[1][0] = sdot[1][0]*dt + s0[1][0];
-//  s[2][0] = sdot[2][0]*dt + s0[2][0];
-  
-  return;
-}
-
-void simpsons()
-{
-  // not full implemented yet
-  return;
-}
-
-void trapezoidal(int s1[3][1], int s0[3][1], int ic[3][1])
-{
-
-  s[0][0] = (s1[0][0] + s0[0][0]) * dt * 0.5 + ic[0][0];
-  s[1][0] = (s1[1][0] + s0[1][0]) * dt * 0.5 + ic[1][0];
-  s[2][0] = (s1[2][0] + s0[2][0]) * dt * 0.5 + ic[2][0];
-  
-  return;
+  return s;
 }
 
 void popAvg(int newData)
