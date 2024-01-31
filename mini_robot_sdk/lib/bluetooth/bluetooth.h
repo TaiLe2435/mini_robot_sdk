@@ -2,4 +2,4 @@
 
 void BTinit();
 
-int getBT();
+byte* getBT();
