@@ -33,7 +33,7 @@ void init_motors()
 void stop()
 {
     motors.setM1Speed(0);
-    motors.setM1Speed(0);
+    motors.setM2Speed(0);
     return;
 }
 
@@ -50,7 +50,7 @@ void move(int v, int theta)
 
     if( (abs(vL) || abs(vR)) > 400)
     {
-        Serial.print("MotionError: Speed commands is  Speeds can only be from 400 to -400");
+        Serial.print("MotionError: Speed commands is ");
         Serial.print(vL);
         Serial.print(" and ");
         Serial.print(vR);
@@ -77,7 +77,7 @@ void move_wheels(int vL, int vR)
 {
     if( (abs(vL) || abs(vR)) > 400)
     {
-        Serial.print("MotionError: Speed commands is  Speeds can only be from 400 to -400");
+        Serial.print("MotionError: Speed commands is ");
         Serial.print(vL);
         Serial.print(" and ");
         Serial.print(vR);

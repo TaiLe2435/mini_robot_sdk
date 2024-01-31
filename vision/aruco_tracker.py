@@ -132,9 +132,9 @@ if __name__ == "__main__":
         
         key = cv2.waitKey(1) & 0xFF
         if key == 27:
-            time.sleep(1)
-            for i in range(10):
-                arduinoData.write(pack('3h', 69, 69, 69)) # port closed code
+            # time.sleep(1)
+            # for i in range(10):
+                # arduinoData.write(pack('3h', 69, 69, 69)) # port closed code
             break
 
     # Release video capture and close windows
@@ -143,6 +143,6 @@ if __name__ == "__main__":
     
     time.sleep(1)
     # arduinoData.reset_output_buffer()
-    arduinoData.write(pack('3h', 69, 69, 69)) # port closed code
+    # arduinoData.write(pack('3h', 69, 69, 69)) # port closed code
     time.sleep(1)
     arduinoData.close()
