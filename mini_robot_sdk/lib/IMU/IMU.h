@@ -6,9 +6,11 @@ using namespace Eigen;
 
 void initIMU();
 
-void NMNI();
+// void NMNI();
 
-void NDZTA();
+// void NDZTA();
+
+Vector3d get_acc();
 
 Vector3d get_rpy();
 
@@ -18,7 +20,7 @@ VectorXd get_pose();
 
 Vector3d trapezoidal(Vector3d, Vector3d, Vector3d);
 
-void popAvg(int);
+// void popAvg(int);
 
 unsigned long CalculateDeltaTime();
 

@@ -1,5 +1,7 @@
 #include "IMU.h"
 
+#include "bluetooth.h"
+
 #include <Arduino.h>
 #include <Wire.h> // I2C lib
 #include <LSM6.h> // Accel and Gyro lib
@@ -26,9 +28,10 @@ float wx, wy, wz;
 float mx, my, mz;
 float magGlobalX, magGlobalY, magGlobalZ;
 float magOffset[3], magGain[3];
+Vector3d acc_th;
+Vector3d gyro_th; 
 
 // Angle Variables
-int a, b, drift;
 int roll, pitch, yaw;
 int roll0, pitch0, yaw0;
 float phiDot, thetaDot, psiDot;
@@ -62,6 +65,9 @@ const float alpha = 0.5; //bigger = not enough filtering, lower = too much filte
 double filtered_data[6] = {0, 0, 0, 0, 0, 0};
 double data[3] = {0, 0, 0};
 
+Vector3d v;
+Vector3d a;
+
 void initIMU() 
 {
   Wire.begin();
@@ -85,6 +91,9 @@ void initIMU()
 
   psiOffset = 0;
 
+  acc_th << 0,0,0;
+  gyro_th << 0,0,0;
+
 //_____________Calib Mag_________________//
   magOffset[0] = -15845; //mxMin
   magOffset[1] = 4232;   //myMin
@@ -101,6 +110,35 @@ void initIMU()
     gyro_pitch_cal += gyroAcc.g.y;                              //Add pitch value to gyro_pitch_cal.
     gyro_roll_cal  += gyroAcc.g.x;                               //Add roll value to gyro_roll_cal.
     gyro_yaw_cal   += gyroAcc.g.z;                                //Add yaw value to gyro_yaw_cal.
+
+    // Update acceleration thresholds
+    if (abs(gyroAcc.a.x) > abs(acc_th(0)))
+    {
+      acc_th(0) = abs(gyroAcc.a.x);
+    }
+        if (abs(gyroAcc.a.y) > abs(acc_th(1)))
+    {
+      acc_th(1) = abs(gyroAcc.a.y);
+    }
+        if (abs(gyroAcc.a.z) > abs(acc_th(2)))
+    {
+      acc_th(2) = abs(gyroAcc.a.z);
+    }
+
+    // Update gyro thresholds
+    if (abs(gyroAcc.g.x) > abs(gyro_th(0)))
+    {
+      gyro_th(0) = abs(gyroAcc.g.x);
+    }
+        if (abs(gyroAcc.g.y) > abs(gyro_th(1)))
+    {
+      gyro_th(1) = abs(gyroAcc.g.y);
+    }
+        if (abs(gyroAcc.g.z) > abs(gyro_th(2)))
+    {
+      gyro_th(2) = abs(gyroAcc.g.z);
+    }
+
     delay(100);
   }
 
@@ -108,25 +146,71 @@ void initIMU()
   gyro_roll_cal  /= calib_cnt;
   gyro_yaw_cal   /= calib_cnt;
 
-  // calib[0] = gyro_roll_cal;
-  // calib[1] = gyro_pitch_cal;
-  // calib[2] = gyro_yaw_cal;
-
-  // return calib;  
+  // Serial.println("Calibration things:"); // global variables from here are accesible in main and other files :)
+  // Serial.println(gyro_roll_cal);
+  // Serial.println(gyro_pitch_cal);
+  // Serial.println(gyro_yaw_cal);
 }
 
-void NMNI()
-{
-  // write logic for detecting stationary points
-  // pull out threshold values of readings
-  // then use those to filter out data
-  return;
-}
+// void NMNI()
+// {
+//   // if imu is static (if IMU readings are below a threshold)
+//   // -- sample for max acceleration readings
+//   // -- set max readings to be new threshold
 
-void NDZTA()
-{
-  // same as above
-  return;
+//   // need to figure out how to resample to find a new threshold
+//   // check how long the data is above our threshold? if it just jumps back
+//   // forth then it is not moving, just giving us a new threshold?
+
+//   // gyroAcc.read();
+
+//   // set acc data to 0
+//   if (abs(gyroAcc.a.x) < abs(acc_th(0)))
+//   {
+//     ax = 0;
+//     v(0) = 0;
+//     a(0) = 0;
+//   }
+//   if (abs(gyroAcc.a.y) < abs(acc_th(1)))
+//   {
+//     ay = 0;
+//     v(1) = 0;
+//     a(1) = 0;
+//   }
+//   if (abs(gyroAcc.a.z) < abs(acc_th(2)))
+//   {
+//     az = 0;
+//     v(2) = 0;
+//     a(2) = 0;
+//   }
+
+//   // // Update acceleration thresholds
+//   // if (abs(gyroAcc.a.x) > abs(acc_th(0)))
+//   // {
+//   //   acc_th(0) = abs(gyroAcc.a.x);
+//   // }
+//   //     if (abs(gyroAcc.a.y) > abs(acc_th(1)))
+//   // {
+//   //   acc_th(1) = abs(gyroAcc.a.y);
+//   // }
+//   //     if (abs(gyroAcc.a.z) > abs(acc_th(2)))
+//   // {
+//   //   acc_th(2) = abs(gyroAcc.a.z);
+//   // }
+
+//   return;
+// }
+
+// void NDZTA()
+// {
+
+//   return;
+// }
+
+Vector3d get_acc(){
+  Vector3d a;
+  a << ax, ay, az;
+  return a;
 }
 
 Vector3d get_rpy()
@@ -153,6 +237,8 @@ Vector3d get_rpy()
   ax = gyroAcc.a.x * scaleA / 100.0;
   ay = gyroAcc.a.y * scaleA / 100.0;
   az = gyroAcc.a.z * scaleA / 100.0;
+
+  // NMNI(); // filtering acceleration readings
 
   data[0] = ax;
   data[1] = ay;
@@ -242,9 +328,10 @@ Vector3d get_position(Vector3d angles)
        -1 * wy * 180/M_PI, wx * 180/M_PI, 0;
   
   Vector3d acc;
+  Vector3d temp;
   // calculating linear acceleration
   Vector3d acc_linear;
-  acc << ax+ax0, ay+ay0, az+az0;
+  temp << ax, ay, az;
   acc_linear = R * acc;
 
   // calculating gravitational acceleration
@@ -257,20 +344,24 @@ Vector3d get_position(Vector3d angles)
   acc << v0(0), v0(1), v0(2);
   acc_centrp = W * acc;
 
-  Vector3d a = acc_linear; // + acc_grav + acc_centrp;
+  a = acc_linear; // + acc_grav + acc_centrp;
   
   // Integration from acc to vel
-  Vector3d v = a*dt + v0;
+  v = a*dt + v0;
 
   // Integration from vel to pos
   Vector3d s = 0.5 * a * dt*dt + v*dt + x0;
+
+  byte* pose = getBT();
+
+  s(0) = pose[0] + pose[1]*256;
+  s(1) = pose[2] + pose[3]*256;
 
   // setting ICs
   a0 = a;
   v0 = v;
   x0 = s;
 
-  // popAvg(s[1][0]);
   return s; 
 }
 
@@ -283,12 +374,10 @@ VectorXd get_pose()
   position = get_position(rpy);
 
   VectorXd pose{6};
-  pose << rpy(0), rpy(1), rpy(2), position(0), position(1), position(2);
-  // pose << 49, 49, 49, position(0), position(1), position(2);
+  pose << position, rpy;
 
   return pose;
 }
-
 
 //__________________Math Functions_____________________________//
 
@@ -302,26 +391,6 @@ Vector3d trapezoidal(Vector3d s1, Vector3d s0, Vector3d ic)
          (s1(2) + s0(2)) * dt * 0.5 + ic(2);
   
   return s;
-}
-
-void popAvg(int newData)
-{
-
-  for(int j = 3; j > 1; j--)
-  {
-    pop[j] = pop[j-1];
-  }
-
-  pop[0] = newData;
-  
-  for(int i = 0; i < 3; i++)
-  {
-    avg += pop[i];
-  }
-
-  avg = avg/3;
-  
-  return;
 }
 
 unsigned long CalculateDeltaTime()

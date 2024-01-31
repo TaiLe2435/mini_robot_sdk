@@ -95,8 +95,8 @@ if __name__ == "__main__":
                 x_center = x_sum * 0.25
                 y_center = y_sum * 0.25
                 
-                # print("x: ", x_center)
-                # print("y: ", y_center)
+                print("x: ", x_center)
+                print("y: ", y_center)
                 
                 _, rvec, tvec = cv2.solvePnP(objPoints, corners[i], cameraMatrix, distCoeffs)
                 rvecs.append(rvec)

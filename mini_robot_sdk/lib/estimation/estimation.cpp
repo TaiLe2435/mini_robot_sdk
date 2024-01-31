@@ -1,4 +1,5 @@
 #include "estimation.h"
+#include "IMU.h"
 #include <Arduino.h>
 #include <math.h>
 #include <Wire.h> // I2C lib
@@ -9,10 +10,7 @@
 
 using namespace Eigen;
 
-LSM6 gyroAcc; 
-LIS3MDL mag;
-
-unsigned long oldTime {0}; // used to calculate time step
+unsigned long old_time {0}; // used to calculate time step
 
 Estimation::Estimation(){
     
@@ -86,11 +84,9 @@ MatrixXd Estimation::imu_process_noise(Vector3d rpy){
     return Gk_imu;
 }
 
-// not done
 Vector4d Estimation::imu_measurement(float ddr_heading, Vector3d pos_prev, Vector3d a_0, VectorXd bias, Vector3d rpy_error){
     // finding heading error
-    Vector3d pose = get_rpy(bias, rpy_error);
-    // waiting for pose from other EKF
+    Vector3d pose = get_pose();
     
     float posx_current = pose(0);
     float posy_current = pose(1);
@@ -100,6 +96,7 @@ Vector4d Estimation::imu_measurement(float ddr_heading, Vector3d pos_prev, Vecto
 
     // finding velocities
     Vector3d acc = get_acc();
+
     float dt = float(calculate_delta_time()) / 10000.0;
 
     float vel[3] {};
@@ -216,7 +213,10 @@ Matrix3d Estimation::ddr_process(float v, float heading){
     return Fk_ddr;
 }
 
-Vector3d Estimation::ddr_measurement(VectorXd pose){ // could just call a pose() function inside so no parameters
+Vector3d Estimation::ddr_measurement(){
+    VectorXd pose{6};
+    pose = get_pose();
+    
     zk_ddr[0] = pose(0); // x
     zk_ddr[1] = pose(1); // y
     zk_ddr[2] = pose(5); // theta
@@ -257,9 +257,8 @@ void Estimation::ddr_update(Vector3d xk_prev, Vector3d xk, Matrix3d P_prev){
     Hk_T = Hk.transpose();
     S = Hk*P_prev*Hk_T + R_ddr;
 
-    VectorXd pose{6}; // need to change this
     Vector3d zh = xk; // and this to Hk*xk | no bc Hk is I
-    Vector3d z = ddr_measurement(pose);
+    Vector3d z = ddr_measurement();
 
     Vector3d innovation;
     innovation << z[0] - zh[0], z[1] - zh[1], z[2] - zh[2]; // innov = z - H*x
@@ -306,7 +305,7 @@ Vector3d Estimation::ddr_ekf(float v, float w, VectorXd pose){
 unsigned long Estimation::calculate_delta_time()
 {
   unsigned long currentTime = millis();
-  unsigned long deltaTime = (currentTime - oldTime);
-  oldTime = currentTime;
+  unsigned long deltaTime = (currentTime - old_time);
+  old_time = currentTime;
   return deltaTime;
 }

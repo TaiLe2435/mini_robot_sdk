@@ -11,6 +11,8 @@
 float* imu_calibration;
 float* heading;
 
+Estimation est;
+
 using namespace Eigen;
 
 void setup() {
@@ -29,21 +31,45 @@ void setup() {
 void loop() {
   stop();
 
-  VectorXd estimation{6};
+//__________ CODE TO TEST ESTIMATION CLASS ___________//
 
-  estimation = get_pose();
+  VectorXd estimation{6};
+  Vector3d foo;
+  VectorXd temp{6};
+
+  temp = get_pose();
+
+//   foo << 0,0,0;
+//   temp << 0,0,0,0,0,0;
+
+//   estimation = est.imu_ekf(foo, foo, foo, foo, temp, foo);
 
   Serial.println("Pose:");
 //  Print the components of an eigen struct
-    for (int i = 0; i < estimation.rows(); ++i) {
-        for (int j = 0; j < estimation.cols(); ++j) {
-            Serial.print(estimation(i,j));
+    for (int i = 0; i < temp.rows(); ++i) {
+        for (int j = 0; j < temp.cols(); ++j) {
+            Serial.print(temp(i,j));
             Serial.print(" ");
         }
         Serial.println("");
     }
 
-  // int desired = getBT();
+// ___________________ CODE FOR TESTING BT __________//
+  // Serial.println("This: ");
+  // byte* desired = getBT();
+  // for (int i=0; i<8; i++){
+  //   Serial.print(desired[i]);
+  //   Serial.print(", ");
+  // }
+  // Serial.println("");
+  // Serial.println("Ints: ");
+  // for (int j=0; j<5; j+=2){
+  //   Serial.print(desired[j] + desired[j+1]*256);
+  //   Serial.print(", ");
+  // }
+  // Serial.println("");
+
+  //_______________________POTENTIAL MAIN LOOP ___________//
   // float kP {0.5};
   // if(desired != 9999)
   // {

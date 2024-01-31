@@ -15,15 +15,12 @@ BluetoothSerial SerialBT;
 
 void BTinit()
 {
-
   SerialBT.begin("mini_robot");
-  delay(1000);
-  
+  delay(1000); 
 }
 
 byte* getBT()
 {
-
     if (SerialBT.available() >= pcDataLen)
     {
       byte inByte;

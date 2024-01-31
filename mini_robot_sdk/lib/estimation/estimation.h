@@ -10,12 +10,12 @@ using namespace Eigen;
 class Estimation {
     public:
         Estimation();
-        VectorXd calibrate_imu();
-        Vector3d get_gyro(Vector3d);
-        Vector3d get_acc();
-        Vector3d get_rpy(VectorXd, Vector3d);
-        Vector3d get_position(Vector3d);
-        VectorXd get_pose();
+        // VectorXd calibrate_imu();
+        // Vector3d get_gyro(Vector3d);
+        // Vector3d get_acc();
+        // Vector3d get_rpy(VectorXd, Vector3d);
+        // Vector3d get_position(Vector3d);
+        // VectorXd get_pose();
         VectorXd imu_ekf(Vector3d, Vector3d, Vector3d, Vector3d, VectorXd, Vector3d);
         Vector3d ddr_ekf(float, float, VectorXd);
 
@@ -27,7 +27,7 @@ class Estimation {
         Matrix3d ddr_process(float, float);
         Matrix3d ddr_measurement_model();
         Vector3d unicycle_model(float, float);
-        Vector3d ddr_measurement(VectorXd);
+        Vector3d ddr_measurement();
 
     private:
         double roll0, pitch0, yaw0;
