@@ -2,6 +2,10 @@ import cv2
 import cv2.aruco as aruco
 import numpy as np
 import time
+from struct import *
+import sys
+import random
+import ast
 from scipy.spatial.transform import Rotation   
 import serial
 import asyncio
@@ -45,8 +49,12 @@ origins = {
 }
 
 # Starting serial communication
-arduinoData = serial.Serial('COM8', 115200) # initializing port and speed | COM outgoing
+arduinoData = serial.Serial('COM7', 115200, timeout=0.5) # initializing port and speed | COM outgoing
+arduinoData.reset_output_buffer()
 arduinoData.reset_input_buffer()
+time.sleep(5)
+
+i = 0
 
 if __name__ == "__main__":
     # Main loop
@@ -56,8 +64,6 @@ if __name__ == "__main__":
             break
 
         h, w = image.shape[:2]
-
-        # image = cv2.resize(image, (320,240), interpolation = cv2.INTER_AREA)
 
         # Calculate new camera matrix
         newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, (w,h), 1, (w,h))
@@ -71,11 +77,11 @@ if __name__ == "__main__":
 
         # Detect markers
         corners, ids, _ = detector.detectMarkers(dst)
-
+        
         # If at least one marker detected
         if ids is not None and len(ids) > 0:
             aruco.drawDetectedMarkers(imageCopy, corners, ids)
-
+            
             nMarkers = len(corners)
             rvecs, tvecs = [], []
 
@@ -100,29 +106,43 @@ if __name__ == "__main__":
                 
                 cRt = Rotation.from_matrix(cRt)
                 angles = cRt.as_euler("zyx", degrees=True)
-                # print("angles: ", angles)
-                
-                cmd = str(10) + '\n'
-                arduinoData.write(cmd.encode())
-                print(cmd)
+                if angles[0] < 0:
+                    angles[0] = angles[0] + 360.0
+                print("angles: ", int(angles[0]))
 
             # Draw axis for each marker
             for i in range(nMarkers):
                 cv2.drawFrameAxes(imageCopy, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10)
-
+            
+            # send x, y, and theta over BT
+            try:
+                arduinoData.write(pack('3h', int(x_center), int(y_center), int(angles[0])))
+            except Exception as e:
+                print(f"Error writing to Arduino: {e}")
+                
+        else:
+            # if can't find aruco marker, send error code
+            try:
+                arduinoData.write(pack('3h', 1000, 2000, 3000)) 
+            except Exception as e:
+                print(f"Error writing to Arduino: {e}")
+                
         # Show resulting image and close window
         cv2.imshow("out", imageCopy)
         
         key = cv2.waitKey(1) & 0xFF
         if key == 27:
+            time.sleep(1)
+            for i in range(10):
+                arduinoData.write(pack('3h', 69, 69, 69)) # port closed code
             break
 
     # Release video capture and close windows
     inputVideo.release()
     cv2.destroyAllWindows()
     
-    end = "42069\n"
     time.sleep(1)
-    arduinoData.write(end.encode())
+    # arduinoData.reset_output_buffer()
+    arduinoData.write(pack('3h', 69, 69, 69)) # port closed code
     time.sleep(1)
     arduinoData.close()
