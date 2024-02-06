@@ -100,11 +100,11 @@ void loop() {
     stop();
     Serial.println("startup");
   }
-  else if (x == 69 && y == 69 && theta == 69)
-  {
-    stop();
-    Serial.println("port closed");
-  }
+  // else if (x == 69 && y == 69 && theta == 69)
+  // {
+  //   stop();
+  //   Serial.println("port closed");
+  // }
   else
   {
     stop();
