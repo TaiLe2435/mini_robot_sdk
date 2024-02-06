@@ -20,14 +20,16 @@ dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
 # marker_image = cv2.aruco.generateImageMarker(dictionary, 1, 200, marker_image, 1)
 # cv2.imwrite("marker1.png", marker_image)
 
-# Open video capture
-inputVideo = cv2.VideoCapture(0)
-
 # camera parameters
 cameraMatrix = np.array([[715.03132426, 0.0, 462.25626965],
  [0.0, 715.67733789, 265.2425816],
  [0.0,        0,              1]])
 distCoeffs = np.array([[0.05515529], [-0.20330285], [-0.00108968], [-0.00468666], [0.25046973]])
+
+# Open video capture
+inputVideo = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+height = int(inputVideo.get(cv2.CAP_PROP_FRAME_HEIGHT))
+width = int(inputVideo.get(cv2.CAP_PROP_FRAME_WIDTH))
 
 # Set coordinate system
 markerLength = 29.40
@@ -62,13 +64,19 @@ end_right = (500, 473)
 color = (0, 255, 0) 
 thickness = 5
 
+print("width: %f" %width)
+print("height: %f" %height)
+
+fourcc = cv2.VideoWriter_fourcc(*'MJPG') #*'mp4v' *'MJPG'
+out = cv2.VideoWriter('250PWM.avi', fourcc, 30.0, (width, height), isColor=True)
+
 if __name__ == "__main__":
     # Main loop
     while inputVideo.isOpened():
         ret, image = inputVideo.read()
         if not ret:
             break
-
+        image = cv2.resize(image, (width,height), interpolation = cv2.INTER_LINEAR)
         h, w = image.shape[:2]
 
         # Calculate new camera matrix
@@ -78,11 +86,8 @@ if __name__ == "__main__":
         dst = cv2.undistort(image, cameraMatrix, distCoeffs, None, newCameraMatrix)
 
         x, y, w, h = roi
-        dst = dst[y:y+h, x:x+w]    
+        # dst = dst[y:y+h, x:x+w]    // crashes recording
         imageCopy = dst.copy()
-        # height, width, channels = imageCopy.shape
-        # print("height: " + str(height))
-        # print("width: " + str(width))
 
         # Detect markers
         corners, ids, _ = detector.detectMarkers(dst)
@@ -137,7 +142,8 @@ if __name__ == "__main__":
         # Show resulting image and close window
         imageCopy = cv2.line(imageCopy, start_left, start_right, color, thickness) 
         imageCopy = cv2.line(imageCopy, end_left, end_right, color, thickness) 
-        cv2.imshow("out", imageCopy)
+        out.write(imageCopy)
+        cv2.imshow("Tracking", imageCopy)
         
         key = cv2.waitKey(1) & 0xFF
         if key == 27:
@@ -145,5 +151,5 @@ if __name__ == "__main__":
 
     # Release video capture and close windows
     inputVideo.release()
+    out.release()
     cv2.destroyAllWindows()
-    
