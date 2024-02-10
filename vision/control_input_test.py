@@ -27,7 +27,7 @@ cameraMatrix = np.array([[715.03132426, 0.0, 462.25626965],
 distCoeffs = np.array([[0.05515529], [-0.20330285], [-0.00108968], [-0.00468666], [0.25046973]])
 
 # Open video capture
-inputVideo = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+inputVideo = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 height = int(inputVideo.get(cv2.CAP_PROP_FRAME_HEIGHT))
 width = int(inputVideo.get(cv2.CAP_PROP_FRAME_WIDTH))
 
@@ -53,22 +53,25 @@ origins = {
 i = 0
 
 # Code for drawing start and end lines
-start_left = (100, 0) 
-end_left = (500, 0) 
+start_left = (200, 0) 
+end_left = (400, 0) 
 
 # height: 473 width: 636
-start_right = (100, 473) 
-end_right = (500, 473) 
+start_right = (200, 473) 
+end_right = (400, 473) 
 
 # Green color in BGR 
 color = (0, 255, 0) 
 thickness = 5
 
-print("width: %f" %width)
-print("height: %f" %height)
-
 fourcc = cv2.VideoWriter_fourcc(*'MJPG') #*'mp4v' *'MJPG'
-out = cv2.VideoWriter('250PWM.avi', fourcc, 30.0, (width, height), isColor=True)
+out = cv2.VideoWriter('test.avi', fourcc, 30.0, (width, height), isColor=True)
+
+# Starting serial communication
+arduinoData = serial.Serial('COM7', 115200, timeout=0.5) # initializing port and speed | COM outgoing
+arduinoData.reset_output_buffer()
+arduinoData.reset_input_buffer()
+time.sleep(5)
 
 if __name__ == "__main__":
     # Main loop
@@ -106,6 +109,7 @@ if __name__ == "__main__":
                 x_sum = corners[0][0][0][0] + corners[0][0][1][0] + corners[0][0][2][0] + corners[0][0][3][0]
                 y_sum = corners[0][0][0][1] + corners[0][0][1][1] + corners[0][0][2][1] + corners[0][0][3][1]
                 
+                # multiply by value to convert to real world coordinates | check if camera calib changes it first
                 x_center = x_sum * 0.25
                 y_center = y_sum * 0.25
                 
@@ -127,17 +131,29 @@ if __name__ == "__main__":
             # Draw axis for each marker
             for i in range(nMarkers):
                 cv2.drawFrameAxes(imageCopy, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 10)
-                
-            if x_center < 105 and x_center > 95:
-                start_time = time.time()
-                print("Passed start line") 
-            
-            if x_center < 505 and x_center > 495:
+           
+            # send x, y, and theta over BT
+            try:
+                arduinoData.write(pack('3h', 89, 326, 0))
+            except Exception as e:
+                print(f"Error writing to Arduino: {e}")
+                    
+            if x_center < 205 and x_center > 195:
                 end_time = time.time()
                 elapsed_time = end_time - start_time
                 print("Passed end line")
                 print("Elapsed time: %f" %elapsed_time ) 
-            
+                
+            if x_center < 405 and x_center > 395:
+                start_time = time.time()
+                print("Passed start line") 
+                
+        else:
+            # if can't find aruco marker, send error code
+            try:
+                arduinoData.write(pack('3h', 1000, 2000, 3000)) 
+            except Exception as e:
+                print(f"Error writing to Arduino: {e}")    
                 
         # Show resulting image and close window
         imageCopy = cv2.line(imageCopy, start_left, start_right, color, thickness) 
@@ -147,9 +163,14 @@ if __name__ == "__main__":
         
         key = cv2.waitKey(1) & 0xFF
         if key == 27:
+            try:
+                arduinoData.write(pack('3h', 1000, 2000, 3000)) 
+            except Exception as e:
+                print(f"Error writing to Arduino: {e}")    
             break
 
     # Release video capture and close windows
     inputVideo.release()
     out.release()
+    arduinoData.close()
     cv2.destroyAllWindows()

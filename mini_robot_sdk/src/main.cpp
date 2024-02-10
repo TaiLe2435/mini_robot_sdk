@@ -29,7 +29,7 @@ void setup() {
 }
 
 void loop() {
-  stop();
+  // stop();
 
 //__________ CODE TO TEST ESTIMATION CLASS ___________//
 
@@ -77,12 +77,24 @@ void loop() {
 
   //_______________________POTENTIAL MAIN LOOP ___________//
   float kP {0.5};
-  if(x != 1000 && y != 2000 && theta != 3000)
+  if (x == 0 && y == 0 && theta == 0)
+  {
+    stop();
+    Serial.println("startup");
+  }
+  else if (x == 1000 && y == 2000 && theta == 3000 )
+  {
+    stop();
+    Serial.println("stopping");
+  }
+  else if(x != 1000 && y != 2000 && theta != 3000)
   {
     // float error = desired - (int)heading;
     float error = 0;
-    float leftSpeed = 200 + kP*error;
-    float rightSpeed = 200 - kP*error;
+    // float leftSpeed = 200 + kP*error;
+    // float rightSpeed = 200 - kP*error;
+    float leftSpeed = x;
+    float rightSpeed = y;
     // Serial.print("left: ");
     // Serial.println(leftSpeed);
     // Serial.print("right: ");
@@ -90,16 +102,7 @@ void loop() {
     move_wheels(leftSpeed, rightSpeed);
     Serial.println("moving");
   }
-  else if (x == 1000 && y == 2000 && theta == 3000 )
-  {
-    stop();
-    Serial.println("stopping");
-  }
-  else if (x == 0 && y == 0 && theta == 0)
-  {
-    stop();
-    Serial.println("startup");
-  }
+
   // else if (x == 69 && y == 69 && theta == 69)
   // {
   //   stop();
