@@ -62,21 +62,20 @@ void loop() {
   int theta = desired[4] + desired[5] * 256;
 
 // Serial.println("This: ");
-  for (int i=0; i<8; i++){
-  Serial.print(desired[i]);
-  Serial.print(", ");
-  }
-  Serial.println("");
+  // for (int i=0; i<8; i++){
+  // Serial.print(desired[i]);
+  // Serial.print(", ");
+  // }
+  // Serial.println("");
 
-  Serial.println("Ints: ");
-  for (int j=0; j<5; j+=2){
-    Serial.print(desired[j] + desired[j+1]*256);
-    Serial.print(", ");
-  }
-  Serial.println("");
+  // Serial.println("Ints: ");
+  // for (int j=0; j<5; j+=2){
+  //   Serial.print(desired[j] + desired[j+1]*256);
+  //   Serial.print(", ");
+  // }
+  // Serial.println("");
 
   //_______________________POTENTIAL MAIN LOOP ___________//
-  float kP {0.5};
   if (x == 0 && y == 0 && theta == 0)
   {
     stop();
@@ -89,10 +88,6 @@ void loop() {
   }
   else if(x != 1000 && y != 2000 && theta != 3000)
   {
-    // float error = desired - (int)heading;
-    float error = 0;
-    // float leftSpeed = 200 + kP*error;
-    // float rightSpeed = 200 - kP*error;
     float leftSpeed = x;
     float rightSpeed = y;
     // Serial.print("left: ");
@@ -102,12 +97,6 @@ void loop() {
     move_wheels(leftSpeed, rightSpeed);
     Serial.println("moving");
   }
-
-  // else if (x == 69 && y == 69 && theta == 69)
-  // {
-  //   stop();
-  //   Serial.println("port closed");
-  // }
   else
   {
     stop();
